@@ -1,0 +1,64 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Project-specific
+Projects/
+output/
+assets/
+*.mp4
+*.mp3
+*.wav
+
+# Large binaries (users should download separately)
+tools/bin/
+
+# Temp files
+.temp/
+__pycache__/
+*.pyc
+
+# Test outputs
+test-results/
+
+# Environment
+.env
+.env.local
+
+# Project-specific
+Projects/
+output/
+assets/
+*.mp4
+*.mp3
+*.wav
+
+# Temp files
+.temp/
+__pycache__/
+*.pyc
+
+# Test outputs
+test-results/
+
+# Environment
+.env
+.env.local

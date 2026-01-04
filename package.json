@@ -1,0 +1,47 @@
+{
+  "name": "videonut",
+  "version": "1.0.0",
+  "description": "AI-powered YouTube documentary production pipeline with 10 specialized agents for research, scripting, and asset management",
+  "keywords": [
+    "youtube",
+    "documentary",
+    "ai-agents",
+    "video-production",
+    "gemini-cli",
+    "qwen",
+    "claude",
+    "content-creation",
+    "scriptwriting",
+    "research",
+    "automation"
+  ],
+  "homepage": "https://github.com/konda-vamshi-krishna/videonut",
+  "bugs": {
+    "url": "https://github.com/konda-vamshi-krishna/videonut/issues"
+  },
+  "license": "MIT",
+  "author": {
+    "name": "Vamshi Krishna",
+    "email": "vamshikrishna131437@gmail.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/konda-vamshi-krishna/videonut.git"
+  },
+  "bin": {
+    "videonut": "./bin/videonut.js"
+  },
+  "files": [
+    "_video_nut/",
+    ".gemini/",
+    ".qwen/",
+    ".claude/",
+    ".antigravity/",
+    "bin/",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}

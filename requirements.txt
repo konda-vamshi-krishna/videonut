@@ -1,0 +1,6 @@
+yt-dlp
+playwright
+requests
+bs4
+pypdf
+youtube-transcript-api

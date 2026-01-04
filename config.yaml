@@ -1,0 +1,62 @@
+# VideoNut Configuration
+# This file is managed by Topic Scout agent. All other agents READ ONLY.
+
+# ═══════════════════════════════════════════════════════════════════
+# USER SETTINGS
+# ═══════════════════════════════════════════════════════════════════
+user_name: "Producer"
+communication_language: "Telugu"
+
+# ═══════════════════════════════════════════════════════════════════
+# PROJECT SETTINGS (Set by Topic Scout)
+# ═══════════════════════════════════════════════════════════════════
+projects_folder: "./Projects"
+current_project: "gemini_2025-12-30_SEBI-Hindenburg_004"
+
+# ═══════════════════════════════════════════════════════════════════
+# VIDEO PRODUCTION SETTINGS (Set by Topic Scout)
+# ═══════════════════════════════════════════════════════════════════
+video_format: "Investigative Documentary"
+target_duration: 20
+target_line_count: 2700
+audio_language: "Telugu"
+
+# ═══════════════════════════════════════════════════════════════════
+# SCOPE & REGION (Set by Topic Scout - User Selected)
+# ═══════════════════════════════════════════════════════════════════
+# scope: international | national | regional
+scope: "national"
+
+# country: Only set if scope is "national" (e.g., India, USA, UK)
+country: "India"
+
+# region: User selected region (NOT auto-derived from language)
+# Examples: "Telangana", "Andhra Pradesh", "Maharashtra", "Tamil Nadu", "Pan-India"
+region: "Pan-India"
+
+# ═══════════════════════════════════════════════════════════════════
+# INDUSTRY TAG (Set by Topic Scout)
+# ═══════════════════════════════════════════════════════════════════
+# Helps agents stay in context and use appropriate sources
+# Options: Finance, Stock Market, Political, Crime, Social Awareness, 
+#          Technology, Entertainment, Sports, Health, Environment, Business, Other
+industry_tag: "Political"
+
+# Industry-specific sources (auto-populated based on industry_tag)
+# Finance: RBI, SEBI, Economic Times, Mint
+# Stock Market: NSE, BSE, MoneyControl, TradingView
+# Political: Election Commission, PRS Legislative, Parliament videos
+# Crime: Court records, Police statements, NCRB data
+# Social Awareness: NGO reports, Government schemes, RTI data
+
+# ═══════════════════════════════════════════════════════════════════
+# EIC CORRECTION TRACKING (Set by EIC after review)
+# ═══════════════════════════════════════════════════════════════════
+# correction_log: Path to the correction log file (relative to project folder)
+# Status: pending_review | corrections_needed | approved
+correction_log: ""
+correction_status: "pending_review"
+
+# Agents with pending corrections (comma-separated)
+# Example: "investigator,scriptwriter,director"
+agents_with_errors: ""
