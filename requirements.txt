@@ -1,6 +1,9 @@
+# VideoNut Dependencies
 yt-dlp
 playwright
 requests
-bs4
+beautifulsoup4
 pypdf
 youtube-transcript-api
+youtube-search-python
+httpx

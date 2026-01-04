@@ -1,8 +1,0 @@
-# Anti-Gravity Configuration
-# Maps B-MAD Agents to Cursor/Anti-Gravity Rules
-
-[rules]
-investigate = ".gemini/commands/bmad-agent-research-investigator.toml"
-direct = ".gemini/commands/bmad-agent-creative-director.toml"
-scavenge = ".gemini/commands/bmad-agent-technical-scavenger.toml"
-review = ".gemini/commands/bmad-agent-core-eic.toml"
