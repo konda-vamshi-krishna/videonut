@@ -141,18 +141,46 @@ async function runInit() {
     // Step 1: Copy VideoNut files
     header('Step 1: Copying VideoNut Files');
 
-    const sourceDir = path.join(__dirname, '..');
-    const folders = ['_video_nut', '.gemini', '.qwen', '.claude', '.antigravity'];
-
-    for (const folder of folders) {
-        const src = path.join(sourceDir, folder);
+    // The package root is where videonut.js is located (bin/../)
+    const packageRoot = path.join(__dirname, '..');
+    
+    // Copy CLI command folders
+    const cliFolders = ['.gemini', '.qwen', '.claude', '.antigravity'];
+    for (const folder of cliFolders) {
+        const src = path.join(packageRoot, folder);
         const dest = path.join(targetDir, folder);
 
         if (fs.existsSync(src)) {
             copyDir(src, dest);
             success(`Copied ${folder}/`);
+        } else {
+            warning(`${folder}/ not found in package`);
         }
     }
+    
+    // Copy _video_nut folder (agents, tools, etc.)
+    const videoNutDest = path.join(targetDir, '_video_nut');
+    fs.mkdirSync(videoNutDest, { recursive: true });
+    
+    const contentFolders = ['agents', 'tools', 'workflows', 'docs', 'memory', 'scripts'];
+    for (const folder of contentFolders) {
+        const src = path.join(packageRoot, folder);
+        const dest = path.join(videoNutDest, folder);
+        if (fs.existsSync(src)) {
+            copyDir(src, dest);
+        }
+    }
+    
+    // Copy individual files to _video_nut
+    const files = ['config.yaml', 'requirements.txt', 'workflow_orchestrator.py', 'file_validator.py', 'README.md', 'USER_GUIDE.md'];
+    for (const file of files) {
+        const src = path.join(packageRoot, file);
+        const dest = path.join(videoNutDest, file);
+        if (fs.existsSync(src)) {
+            fs.copyFileSync(src, dest);
+        }
+    }
+    success('Copied _video_nut/ (agents, tools, workflows)');
 
     // Create Projects folder
     const projectsDir = path.join(targetDir, 'Projects');

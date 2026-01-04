@@ -32,13 +32,23 @@
     "videonut": "./bin/videonut.js"
   },
   "files": [
-    "_video_nut/",
+    "agents/",
+    "tools/",
+    "workflows/",
+    "docs/",
+    "memory/",
+    "scripts/",
     ".gemini/",
     ".qwen/",
     ".claude/",
     ".antigravity/",
     "bin/",
+    "config.yaml",
+    "requirements.txt",
+    "workflow_orchestrator.py",
+    "file_validator.py",
     "README.md",
+    "USER_GUIDE.md",
     "LICENSE"
   ],
   "engines": {
