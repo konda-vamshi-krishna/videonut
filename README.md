@@ -55,7 +55,7 @@ VideoNut transforms your ideas into **production-ready YouTube documentaries** u
 
 ### ⚠️ Prerequisites: Install Node.js First
 
-VideoNut requires **Node.js 18+** to run. Choose one method to install:
+VideoNut requires **Node.js 20+** to run. Choose one method to install:
 
 <details>
 <summary><b>📥 Option A: Download from Website (Easiest)</b></summary>

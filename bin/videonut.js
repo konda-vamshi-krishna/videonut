@@ -396,6 +396,18 @@ async function runInit() {
                     stdio: 'inherit'
                 });
                 success('Python requirements installed');
+
+                // Install Playwright browsers (needed for screenshot tools)
+                try {
+                    info('Installing Playwright browsers (for screenshots)...');
+                    execSync(`"${pythonCmd}" -m playwright install chromium`, {
+                        stdio: 'inherit'
+                    });
+                    success('Playwright browsers installed');
+                } catch (e) {
+                    warning('Could not install Playwright browsers');
+                    info('Run manually: python -m playwright install chromium');
+                }
             } catch (e) {
                 warning('Could not install Python requirements automatically');
                 info(`Please run: ${pythonCmd} -m pip install -r ${reqPath}`);
