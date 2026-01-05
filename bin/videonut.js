@@ -438,6 +438,7 @@ async function runInit() {
                 info('Installing Claude CLI globally...');
                 execSync('npm install -g @anthropic-ai/claude-code', { stdio: 'inherit' });
                 success('Claude CLI installed successfully!');
+                info('Run "claude" to start Claude CLI');
                 selectedCli = 'claude';
             } catch (e) {
                 error('Failed to install Claude CLI');
@@ -447,23 +448,25 @@ async function runInit() {
             // Install Qwen CLI
             try {
                 info('Installing Qwen CLI globally...');
-                execSync('npm install -g @anthropic-ai/claude-code', { stdio: 'inherit' });
-                // Note: Replace with actual Qwen CLI package when available
+                execSync('npm install -g @qwen-code/qwen-code', { stdio: 'inherit' });
                 success('Qwen CLI installed successfully!');
+                info('Run "qwen" to start Qwen CLI');
                 selectedCli = 'qwen';
             } catch (e) {
                 error('Failed to install Qwen CLI');
-                info('Please install Qwen CLI manually following official documentation');
+                info('Please install manually: npm install -g @qwen-code/qwen-code');
             }
         } else if (choice !== '4') {
             // Install Gemini CLI (default)
             try {
                 info('Installing Gemini CLI globally...');
-                execSync('npm install -g @google/generative-ai-cli', { stdio: 'inherit' });
+                execSync('npm install -g @google/gemini-cli', { stdio: 'inherit' });
                 success('Gemini CLI installed successfully!');
+                info('Run "gemini" to start Gemini CLI');
                 selectedCli = 'gemini';
             } catch (e) {
                 warning('Could not auto-install Gemini CLI');
+                info('Please install manually: npm install -g @google/gemini-cli');
                 console.log('\nPlease install Gemini CLI manually following official documentation');
             }
         }

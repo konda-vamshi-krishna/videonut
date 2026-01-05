@@ -273,25 +273,28 @@ async function main() {
             try {
                 info('Installing Claude CLI globally...');
                 execSync('npm install -g @anthropic-ai/claude-code', { stdio: 'inherit' });
-                success('Claude CLI installed!');
+                success('Claude CLI installed! Run "claude" to start.');
             } catch (e) {
-                warning('Could not install CLI. Please install manually.');
+                warning('Could not install CLI.');
+                info('Install manually: npm install -g @anthropic-ai/claude-code');
             }
         } else if (answer === '3') {
             try {
                 info('Installing Qwen CLI globally...');
-                execSync('npm install -g @anthropic-ai/claude-code', { stdio: 'inherit' });
-                success('Qwen CLI installed!');
+                execSync('npm install -g @qwen-code/qwen-code', { stdio: 'inherit' });
+                success('Qwen CLI installed! Run "qwen" to start.');
             } catch (e) {
-                warning('Could not install CLI. Please install manually.');
+                warning('Could not install CLI.');
+                info('Install manually: npm install -g @qwen-code/qwen-code');
             }
         } else if (answer !== '4') {
             try {
                 info('Installing Gemini CLI globally...');
-                execSync('npm install -g @google/generative-ai-cli', { stdio: 'inherit' });
-                success('Gemini CLI installed!');
+                execSync('npm install -g @google/gemini-cli', { stdio: 'inherit' });
+                success('Gemini CLI installed! Run "gemini" to start.');
             } catch (e) {
-                warning('Could not install CLI. Please install manually.');
+                warning('Could not install CLI.');
+                info('Install manually: npm install -g @google/gemini-cli');
             }
         }
     }
