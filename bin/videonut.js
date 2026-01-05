@@ -259,13 +259,25 @@ async function runInit() {
         ? path.join(localPythonDir, 'python.exe')
         : path.join(localPythonDir, 'bin', 'python3');
 
-    // Check for system Python first
-    if (commandExists('python3')) {
+    // Check for system Python first (must actually work, not just exist)
+    // Windows has a fake 'python' command that opens Microsoft Store
+    function isPythonWorking(cmd) {
+        try {
+            const result = execSync(`"${cmd}" --version`, { stdio: 'pipe', timeout: 5000 });
+            return result.toString().toLowerCase().includes('python');
+        } catch {
+            return false;
+        }
+    }
+
+    if (isPythonWorking('python3')) {
         pythonCmd = 'python3';
         success('Found system Python3');
-    } else if (commandExists('python')) {
+    } else if (isPythonWorking('python')) {
         pythonCmd = 'python';
         success('Found system Python');
+    } else {
+        info('No working Python found on system');
     }
 
     // If no Python found, download it (Windows only for now)
@@ -422,65 +434,85 @@ async function runInit() {
     // ═══════════════════════════════════════════════════════════════
     header('Step 5/6: Setting Up AI CLI');
 
-    const hasGemini = commandExists('gemini');
-    const hasQwen = commandExists('qwen');
-    const hasClaude = commandExists('claude');
+    // Verify CLI actually works (not just exists in PATH)
+    function isCliWorking(cmd) {
+        try {
+            execSync(`${cmd} --version`, { stdio: 'pipe', timeout: 10000 });
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
+    const hasGemini = isCliWorking('gemini');
+    const hasQwen = isCliWorking('qwen');
+    const hasClaude = isCliWorking('claude');
 
     let selectedCli = null;
 
+    // Show what's detected
+    console.log('Checking installed CLIs...');
+    if (hasGemini) { success('  Gemini CLI - Installed'); }
+    if (hasQwen) { success('  Qwen CLI - Installed'); }
+    if (hasClaude) { success('  Claude CLI - Installed'); }
+    if (!hasGemini && !hasQwen && !hasClaude) {
+        info('  No AI CLI currently installed');
+    }
+
+    // Always offer installation choice (Gemini recommended)
+    console.log('\n📦 CLI Installation:');
+    console.log('  1. Install Gemini CLI (recommended - by Google)');
+    console.log('  2. Install Claude CLI (by Anthropic)');
+    console.log('  3. Install Qwen CLI (by Alibaba)');
     if (hasGemini || hasQwen || hasClaude) {
-        console.log('Detected CLI Tools:');
-        if (hasGemini) { success('  Gemini CLI - Installed'); selectedCli = 'gemini'; }
-        if (hasQwen) { success('  Qwen CLI - Installed'); selectedCli = selectedCli || 'qwen'; }
-        if (hasClaude) { success('  Claude CLI - Installed'); selectedCli = selectedCli || 'claude'; }
+        console.log('  4. Skip - Use existing CLI\n');
     } else {
-        info('No AI CLI found. Installing Gemini CLI (recommended)...\n');
-
-        console.log('Which CLI would you like to install?');
-        console.log('  1. Gemini CLI (recommended - by Google)');
-        console.log('  2. Claude CLI (by Anthropic)');
-        console.log('  3. Qwen CLI (by Alibaba)');
         console.log('  4. Skip - I will install manually\n');
+    }
 
-        const choice = await ask('Enter choice [1]: ');
+    const choice = await ask('Enter choice [1 for Gemini]: ');
 
-        if (choice === '2') {
-            // Install Claude CLI
-            try {
-                info('Installing Claude CLI globally...');
-                execSync('npm install -g @anthropic-ai/claude-code', { stdio: 'inherit' });
-                success('Claude CLI installed successfully!');
-                info('Run "claude" to start Claude CLI');
-                selectedCli = 'claude';
-            } catch (e) {
-                error('Failed to install Claude CLI');
-                info('Please install manually: npm install -g @anthropic-ai/claude-code');
-            }
-        } else if (choice === '3') {
-            // Install Qwen CLI
-            try {
-                info('Installing Qwen CLI globally...');
-                execSync('npm install -g @qwen-code/qwen-code', { stdio: 'inherit' });
-                success('Qwen CLI installed successfully!');
-                info('Run "qwen" to start Qwen CLI');
-                selectedCli = 'qwen';
-            } catch (e) {
-                error('Failed to install Qwen CLI');
-                info('Please install manually: npm install -g @qwen-code/qwen-code');
-            }
-        } else if (choice !== '4') {
-            // Install Gemini CLI (default)
-            try {
-                info('Installing Gemini CLI globally...');
-                execSync('npm install -g @google/gemini-cli', { stdio: 'inherit' });
-                success('Gemini CLI installed successfully!');
-                info('Run "gemini" to start Gemini CLI');
-                selectedCli = 'gemini';
-            } catch (e) {
-                warning('Could not auto-install Gemini CLI');
-                info('Please install manually: npm install -g @google/gemini-cli');
-                console.log('\nPlease install Gemini CLI manually following official documentation');
-            }
+    if (choice === '2') {
+        // Install Claude CLI
+        try {
+            info('Installing Claude CLI globally...');
+            execSync('npm install -g @anthropic-ai/claude-code', { stdio: 'inherit' });
+            success('Claude CLI installed successfully!');
+            info('Run "claude" to start Claude CLI');
+            selectedCli = 'claude';
+        } catch (e) {
+            error('Failed to install Claude CLI');
+            info('Please install manually: npm install -g @anthropic-ai/claude-code');
+        }
+    } else if (choice === '3') {
+        // Install Qwen CLI
+        try {
+            info('Installing Qwen CLI globally...');
+            execSync('npm install -g @qwen-code/qwen-code', { stdio: 'inherit' });
+            success('Qwen CLI installed successfully!');
+            info('Run "qwen" to start Qwen CLI');
+            selectedCli = 'qwen';
+        } catch (e) {
+            error('Failed to install Qwen CLI');
+            info('Please install manually: npm install -g @qwen-code/qwen-code');
+        }
+    } else if (choice === '4') {
+        // Skip - use existing or none
+        if (hasGemini) selectedCli = 'gemini';
+        else if (hasQwen) selectedCli = 'qwen';
+        else if (hasClaude) selectedCli = 'claude';
+        info('Skipped CLI installation');
+    } else {
+        // Install Gemini CLI (default for choice 1 or empty)
+        try {
+            info('Installing Gemini CLI globally...');
+            execSync('npm install -g @google/gemini-cli', { stdio: 'inherit' });
+            success('Gemini CLI installed successfully!');
+            info('Run "gemini" to start Gemini CLI');
+            selectedCli = 'gemini';
+        } catch (e) {
+            warning('Could not auto-install Gemini CLI');
+            info('Please install manually: npm install -g @google/gemini-cli');
         }
     }
 
