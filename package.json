@@ -1,6 +1,6 @@
 {
   "name": "videonut",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "AI-powered YouTube documentary production pipeline with 10 specialized agents for research, scripting, and asset management",
   "keywords": [
     "youtube",
@@ -28,6 +28,9 @@
     "type": "git",
     "url": "git+https://github.com/konda-vamshi-krishna/videonut.git"
   },
+  "scripts": {
+    "setup": "node setup.js"
+  },
   "bin": {
     "videonut": "./bin/videonut.js"
   },
@@ -46,12 +49,14 @@
     ".claude/",
     ".antigravity/",
     "bin/",
+    "setup.js",
     "config.yaml",
     "requirements.txt",
     "workflow_orchestrator.py",
     "file_validator.py",
     "README.md",
     "USER_GUIDE.md",
+    "CONTRIBUTING.md",
     "LICENSE"
   ],
   "engines": {

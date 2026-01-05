@@ -56,18 +56,23 @@ VideoNut transforms your ideas into **production-ready YouTube documentaries** u
 ### Prerequisites
 - **Node.js 16+** - [Download here](https://nodejs.org) 
 
-### Install & Run
+### Option 1: NPX (Recommended)
 ```bash
-# Create a new project folder
 mkdir my-documentary
 cd my-documentary
-
-# Run the installer (downloads everything automatically!)
 npx videonut init
 ```
 
-The installer automatically sets up:
+### Option 2: Clone from GitHub
+```bash
+git clone https://github.com/konda-vamshi-krishna/videonut.git
+cd videonut
+npm run setup
+```
+
+Both methods automatically install:
 - ✅ Python (if not installed)
+
 - ✅ FFmpeg & FFprobe
 - ✅ Gemini CLI (or your choice)
 - ✅ All Python dependencies
