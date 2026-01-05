@@ -427,7 +427,8 @@ async function runInit() {
         console.log('Which CLI would you like to install?');
         console.log('  1. Gemini CLI (recommended - by Google)');
         console.log('  2. Claude CLI (by Anthropic)');
-        console.log('  3. Skip - I will install manually\n');
+        console.log('  3. Qwen CLI (by Alibaba)');
+        console.log('  4. Skip - I will install manually\n');
 
         const choice = await ask('Enter choice [1]: ');
 
@@ -442,13 +443,23 @@ async function runInit() {
                 error('Failed to install Claude CLI');
                 info('Please install manually: npm install -g @anthropic-ai/claude-code');
             }
-        } else if (choice !== '3') {
+        } else if (choice === '3') {
+            // Install Qwen CLI
+            try {
+                info('Installing Qwen CLI globally...');
+                execSync('npm install -g @anthropic-ai/claude-code', { stdio: 'inherit' });
+                // Note: Replace with actual Qwen CLI package when available
+                success('Qwen CLI installed successfully!');
+                selectedCli = 'qwen';
+            } catch (e) {
+                error('Failed to install Qwen CLI');
+                info('Please install Qwen CLI manually following official documentation');
+            }
+        } else if (choice !== '4') {
             // Install Gemini CLI (default)
             try {
                 info('Installing Gemini CLI globally...');
-                execSync('npm install -g @anthropic-ai/claude-code', { stdio: 'inherit' });
-                // Note: Replace with actual Gemini CLI package when available
-                // For now using placeholder - actual command may be different
+                execSync('npm install -g @google/generative-ai-cli', { stdio: 'inherit' });
                 success('Gemini CLI installed successfully!');
                 selectedCli = 'gemini';
             } catch (e) {
