@@ -53,8 +53,43 @@ VideoNut transforms your ideas into **production-ready YouTube documentaries** u
 
 ## 📦 Quick Install
 
-### Prerequisites
-- **Node.js 16+** - [Download here](https://nodejs.org) 
+### ⚠️ Prerequisites: Install Node.js First
+
+VideoNut requires **Node.js 18+** to run. Choose one method to install:
+
+<details>
+<summary><b>📥 Option A: Download from Website (Easiest)</b></summary>
+
+1. Go to **[nodejs.org](https://nodejs.org)**
+2. Download the **LTS version** (recommended)
+3. Run the installer and follow the prompts
+4. Restart your computer
+5. Verify installation: `node --version` and `npm --version`
+
+</details>
+
+<details>
+<summary><b>💻 Option B: Install via Command Line</b></summary>
+
+**Windows (PowerShell as Administrator):**
+```powershell
+winget install OpenJS.NodeJS.LTS
+```
+
+**macOS:**
+```bash
+brew install node
+```
+
+**Linux (Ubuntu/Debian):**
+```bash
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt-get install -y nodejs
+```
+
+</details>
+
+---
 
 ### Option 1: NPX (Recommended)
 ```bash
