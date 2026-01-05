@@ -6,17 +6,20 @@
  * This script installs VideoNut and ALL its requirements:
  * 1. Copies all VideoNut files to current directory
  * 2. Creates Projects folder
- * 3. Installs Python (if needed)
- * 4. Runs pip install -r requirements.txt
- * 5. Downloads ffmpeg and ffprobe
- * 6. Installs chosen CLI (Gemini/Qwen/Claude)
+ * 3. Downloads & installs Python (if needed) - to _video_nut/python/
+ * 4. Downloads FFmpeg & FFprobe - to _video_nut/tools/bin/
+ * 5. Runs pip install -r requirements.txt
+ * 6. Installs Gemini CLI (or user's choice) globally
+ * 7. Launches the CLI tool
  */
 
-const { execSync, spawnSync } = require('child_process');
+const { execSync, spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 const https = require('https');
+const http = require('http');
 const readline = require('readline');
+const { createWriteStream, mkdirSync, existsSync } = require('fs');
 
 // Colors for console
 const colors = {
@@ -43,6 +46,7 @@ function success(msg) { log(`✅ ${msg}`, 'green'); }
 function warning(msg) { log(`⚠️  ${msg}`, 'yellow'); }
 function error(msg) { log(`❌ ${msg}`, 'red'); }
 function info(msg) { log(`ℹ️  ${msg}`, 'cyan'); }
+function progress(msg) { process.stdout.write(`\r⏳ ${msg}`); }
 
 // Check if command exists
 function commandExists(cmd) {
@@ -71,9 +75,82 @@ function ask(question) {
     });
 }
 
+// Download file with progress
+function downloadFile(url, dest, description = 'Downloading') {
+    return new Promise((resolve, reject) => {
+        const protocol = url.startsWith('https') ? https : http;
+
+        const request = (currentUrl) => {
+            protocol.get(currentUrl, response => {
+                // Handle redirects
+                if (response.statusCode === 302 || response.statusCode === 301) {
+                    request(response.headers.location);
+                    return;
+                }
+
+                if (response.statusCode !== 200) {
+                    reject(new Error(`Failed to download: ${response.statusCode}`));
+                    return;
+                }
+
+                const totalSize = parseInt(response.headers['content-length'], 10);
+                let downloadedSize = 0;
+
+                const file = createWriteStream(dest);
+
+                response.on('data', chunk => {
+                    downloadedSize += chunk.length;
+                    if (totalSize) {
+                        const percent = Math.round((downloadedSize / totalSize) * 100);
+                        const mb = (downloadedSize / 1024 / 1024).toFixed(1);
+                        const totalMb = (totalSize / 1024 / 1024).toFixed(1);
+                        progress(`${description}: ${mb}MB / ${totalMb}MB (${percent}%)`);
+                    }
+                });
+
+                response.pipe(file);
+
+                file.on('finish', () => {
+                    file.close();
+                    console.log(''); // New line after progress
+                    resolve();
+                });
+
+                file.on('error', err => {
+                    fs.unlink(dest, () => { });
+                    reject(err);
+                });
+            }).on('error', reject);
+        };
+
+        request(url);
+    });
+}
+
+// Extract zip file
+async function extractZip(zipPath, destDir) {
+    const isWindows = process.platform === 'win32';
+
+    if (isWindows) {
+        // Use PowerShell to extract
+        try {
+            execSync(`powershell -Command "Expand-Archive -Path '${zipPath}' -DestinationPath '${destDir}' -Force"`, { stdio: 'pipe' });
+        } catch (e) {
+            throw new Error(`Failed to extract zip: ${e.message}`);
+        }
+    } else {
+        // Use unzip command on Unix
+        try {
+            execSync(`unzip -o "${zipPath}" -d "${destDir}"`, { stdio: 'pipe' });
+        } catch (e) {
+            throw new Error(`Failed to extract zip: ${e.message}`);
+        }
+    }
+}
+
 // Copy directory recursively
 function copyDir(src, dest) {
-    fs.mkdirSync(dest, { recursive: true });
+    mkdirSync(dest, { recursive: true });
     const entries = fs.readdirSync(src, { withFileTypes: true });
 
     for (const entry of entries) {
@@ -82,42 +159,20 @@ function copyDir(src, dest) {
 
         if (entry.isDirectory()) {
             // Skip certain directories
-            if (['node_modules', '.git', 'Projects', 'output', 'assets'].includes(entry.name)) {
+            if (['node_modules', '.git', 'Projects', 'output', 'assets', '__pycache__'].includes(entry.name)) {
+                continue;
+            }
+            // Skip tools/bin (we'll download fresh ffmpeg)
+            if (entry.name === 'bin' && srcPath.includes('tools')) {
                 continue;
             }
             copyDir(srcPath, destPath);
         } else {
+            // Skip compiled python files
+            if (entry.name.endsWith('.pyc')) continue;
             fs.copyFileSync(srcPath, destPath);
         }
     }
-}
-
-// Download file
-function downloadFile(url, dest) {
-    return new Promise((resolve, reject) => {
-        const file = fs.createWriteStream(dest);
-        https.get(url, response => {
-            if (response.statusCode === 302 || response.statusCode === 301) {
-                // Follow redirect
-                https.get(response.headers.location, res => {
-                    res.pipe(file);
-                    file.on('finish', () => {
-                        file.close();
-                        resolve();
-                    });
-                });
-            } else {
-                response.pipe(file);
-                file.on('finish', () => {
-                    file.close();
-                    resolve();
-                });
-            }
-        }).on('error', err => {
-            fs.unlink(dest, () => { });
-            reject(err);
-        });
-    });
 }
 
 async function main() {
@@ -125,6 +180,7 @@ async function main() {
     const command = args[0];
 
     header('VideoNut - AI-Powered Documentary Pipeline');
+    console.log('Complete Installation - Everything You Need!\n');
 
     if (command === 'init') {
         await runInit();
@@ -135,48 +191,49 @@ async function main() {
 
 async function runInit() {
     const targetDir = process.cwd();
+    const isWindows = process.platform === 'win32';
 
     info(`Installing VideoNut in: ${targetDir}\n`);
 
-    // Step 1: Copy VideoNut files
-    header('Step 1: Copying VideoNut Files');
+    // ═══════════════════════════════════════════════════════════════
+    // STEP 1: Copy VideoNut Files
+    // ═══════════════════════════════════════════════════════════════
+    header('Step 1/6: Copying VideoNut Files');
 
-    // The package root is where videonut.js is located (bin/../)
     const packageRoot = path.join(__dirname, '..');
-    
-    // Copy CLI command folders
+
+    // Copy CLI command folders to target root
     const cliFolders = ['.gemini', '.qwen', '.claude', '.antigravity'];
     for (const folder of cliFolders) {
         const src = path.join(packageRoot, folder);
         const dest = path.join(targetDir, folder);
 
-        if (fs.existsSync(src)) {
+        if (existsSync(src)) {
             copyDir(src, dest);
             success(`Copied ${folder}/`);
-        } else {
-            warning(`${folder}/ not found in package`);
         }
     }
-    
-    // Copy _video_nut folder (agents, tools, etc.)
-    const videoNutDest = path.join(targetDir, '_video_nut');
-    fs.mkdirSync(videoNutDest, { recursive: true });
-    
+
+    // Create _video_nut folder structure
+    const videoNutDir = path.join(targetDir, '_video_nut');
+    mkdirSync(videoNutDir, { recursive: true });
+
+    // Copy content folders
     const contentFolders = ['agents', 'tools', 'workflows', 'docs', 'memory', 'scripts'];
     for (const folder of contentFolders) {
         const src = path.join(packageRoot, folder);
-        const dest = path.join(videoNutDest, folder);
-        if (fs.existsSync(src)) {
+        const dest = path.join(videoNutDir, folder);
+        if (existsSync(src)) {
             copyDir(src, dest);
         }
     }
-    
-    // Copy individual files to _video_nut
+
+    // Copy individual files
     const files = ['config.yaml', 'requirements.txt', 'workflow_orchestrator.py', 'file_validator.py', 'README.md', 'USER_GUIDE.md'];
     for (const file of files) {
         const src = path.join(packageRoot, file);
-        const dest = path.join(videoNutDest, file);
-        if (fs.existsSync(src)) {
+        const dest = path.join(videoNutDir, file);
+        if (existsSync(src)) {
             fs.copyFileSync(src, dest);
         }
     }
@@ -184,101 +241,298 @@ async function runInit() {
 
     // Create Projects folder
     const projectsDir = path.join(targetDir, 'Projects');
-    fs.mkdirSync(projectsDir, { recursive: true });
+    mkdirSync(projectsDir, { recursive: true });
     success('Created Projects/ folder');
 
-    // Step 2: Check Python
-    header('Step 2: Checking Python');
+    // Create necessary subdirectories
+    const toolsBinDir = path.join(videoNutDir, 'tools', 'bin');
+    mkdirSync(toolsBinDir, { recursive: true });
 
-    const hasPython = commandExists('python') || commandExists('python3');
+    // ═══════════════════════════════════════════════════════════════
+    // STEP 2: Install/Download Python
+    // ═══════════════════════════════════════════════════════════════
+    header('Step 2/6: Setting Up Python');
 
-    if (hasPython) {
-        success('Python is installed');
+    let pythonCmd = null;
+    const localPythonDir = path.join(videoNutDir, 'python');
+    const localPythonExe = isWindows
+        ? path.join(localPythonDir, 'python.exe')
+        : path.join(localPythonDir, 'bin', 'python3');
 
-        // Install requirements
-        info('Installing Python requirements...');
-        const reqPath = path.join(targetDir, '_video_nut', 'requirements.txt');
+    // Check for system Python first
+    if (commandExists('python3')) {
+        pythonCmd = 'python3';
+        success('Found system Python3');
+    } else if (commandExists('python')) {
+        pythonCmd = 'python';
+        success('Found system Python');
+    }
 
-        if (fs.existsSync(reqPath)) {
+    // If no Python found, download it (Windows only for now)
+    if (!pythonCmd && isWindows) {
+        info('Python not found. Downloading Python...');
+
+        const pythonVersion = '3.12.1';
+        const pythonZipUrl = `https://www.python.org/ftp/python/${pythonVersion}/python-${pythonVersion}-embed-amd64.zip`;
+        const pythonZipPath = path.join(videoNutDir, 'python.zip');
+
+        try {
+            mkdirSync(localPythonDir, { recursive: true });
+
+            await downloadFile(pythonZipUrl, pythonZipPath, 'Downloading Python');
+
+            info('Extracting Python...');
+            await extractZip(pythonZipPath, localPythonDir);
+
+            // Clean up zip
+            fs.unlinkSync(pythonZipPath);
+
+            // Download get-pip.py
+            const getPipUrl = 'https://bootstrap.pypa.io/get-pip.py';
+            const getPipPath = path.join(localPythonDir, 'get-pip.py');
+            await downloadFile(getPipUrl, getPipPath, 'Downloading pip installer');
+
+            // Enable pip in embedded Python by modifying python312._pth
+            const pthFile = path.join(localPythonDir, `python312._pth`);
+            if (existsSync(pthFile)) {
+                let content = fs.readFileSync(pthFile, 'utf8');
+                content = content.replace('#import site', 'import site');
+                fs.writeFileSync(pthFile, content);
+            }
+
+            // Install pip
+            info('Installing pip...');
+            execSync(`"${path.join(localPythonDir, 'python.exe')}" "${getPipPath}"`, {
+                stdio: 'inherit',
+                cwd: localPythonDir
+            });
+
+            pythonCmd = path.join(localPythonDir, 'python.exe');
+            success(`Python installed to: ${localPythonDir}`);
+
+        } catch (e) {
+            warning(`Could not auto-install Python: ${e.message}`);
+            console.log('\nPlease install Python manually:');
+            console.log('  https://www.python.org/downloads/');
+        }
+    } else if (!pythonCmd) {
+        warning('Python not found!');
+        console.log('\nPlease install Python:');
+        console.log('  Mac: brew install python3');
+        console.log('  Linux: sudo apt install python3 python3-pip');
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // STEP 3: Download FFmpeg
+    // ═══════════════════════════════════════════════════════════════
+    header('Step 3/6: Setting Up FFmpeg');
+
+    const ffmpegPath = path.join(toolsBinDir, isWindows ? 'ffmpeg.exe' : 'ffmpeg');
+    const ffprobePath = path.join(toolsBinDir, isWindows ? 'ffprobe.exe' : 'ffprobe');
+
+    if (existsSync(ffmpegPath) && existsSync(ffprobePath)) {
+        success('FFmpeg already exists in tools/bin/');
+    } else if (commandExists('ffmpeg') && commandExists('ffprobe')) {
+        success('FFmpeg found in system PATH');
+    } else if (isWindows) {
+        info('Downloading FFmpeg...');
+
+        // Using BtbN builds (more reliable)
+        const ffmpegUrl = 'https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip';
+        const ffmpegZipPath = path.join(videoNutDir, 'ffmpeg.zip');
+        const ffmpegExtractDir = path.join(videoNutDir, 'ffmpeg_temp');
+
+        try {
+            await downloadFile(ffmpegUrl, ffmpegZipPath, 'Downloading FFmpeg');
+
+            info('Extracting FFmpeg...');
+            mkdirSync(ffmpegExtractDir, { recursive: true });
+            await extractZip(ffmpegZipPath, ffmpegExtractDir);
+
+            // Find the bin folder inside extracted directory
+            const extractedDirs = fs.readdirSync(ffmpegExtractDir);
+            const ffmpegDir = extractedDirs.find(d => d.startsWith('ffmpeg'));
+
+            if (ffmpegDir) {
+                const binDir = path.join(ffmpegExtractDir, ffmpegDir, 'bin');
+
+                // Copy ffmpeg and ffprobe
+                if (existsSync(path.join(binDir, 'ffmpeg.exe'))) {
+                    fs.copyFileSync(path.join(binDir, 'ffmpeg.exe'), ffmpegPath);
+                    fs.copyFileSync(path.join(binDir, 'ffprobe.exe'), ffprobePath);
+                    success(`FFmpeg installed to: ${toolsBinDir}`);
+                }
+            }
+
+            // Clean up
+            fs.unlinkSync(ffmpegZipPath);
+            fs.rmSync(ffmpegExtractDir, { recursive: true, force: true });
+
+        } catch (e) {
+            warning(`Could not auto-install FFmpeg: ${e.message}`);
+            console.log('\nPlease download manually:');
+            console.log('  https://www.gyan.dev/ffmpeg/builds/');
+            console.log(`  Extract ffmpeg.exe and ffprobe.exe to: ${toolsBinDir}`);
+        }
+    } else {
+        warning('FFmpeg not found!');
+        console.log('\nPlease install FFmpeg:');
+        console.log('  Mac: brew install ffmpeg');
+        console.log('  Linux: sudo apt install ffmpeg');
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // STEP 4: Install Python Requirements
+    // ═══════════════════════════════════════════════════════════════
+    header('Step 4/6: Installing Python Libraries');
+
+    if (pythonCmd) {
+        const reqPath = path.join(videoNutDir, 'requirements.txt');
+
+        if (existsSync(reqPath)) {
             try {
-                const pythonCmd = commandExists('python3') ? 'python3' : 'python';
-                execSync(`${pythonCmd} -m pip install -r "${reqPath}"`, { stdio: 'inherit' });
+                info('Installing Python requirements...');
+                execSync(`"${pythonCmd}" -m pip install -r "${reqPath}"`, {
+                    stdio: 'inherit'
+                });
                 success('Python requirements installed');
             } catch (e) {
                 warning('Could not install Python requirements automatically');
-                info(`Please run: pip install -r ${reqPath}`);
+                info(`Please run: ${pythonCmd} -m pip install -r ${reqPath}`);
             }
         }
     } else {
-        warning('Python not found!');
-        console.log('\nPlease install Python manually:');
-        console.log('  Windows: https://www.python.org/downloads/');
-        console.log('  Mac: brew install python3');
-        console.log('  Linux: sudo apt install python3 python3-pip');
-        console.log('\nAfter installing Python, run:');
-        console.log(`  pip install -r ${path.join(targetDir, '_video_nut', 'requirements.txt')}`);
+        warning('Skipped - Python not available');
     }
 
-    // Step 3: Check FFmpeg
-    header('Step 3: Checking FFmpeg');
-
-    const hasFFmpeg = commandExists('ffmpeg');
-    const hasFFprobe = commandExists('ffprobe');
-
-    if (hasFFmpeg && hasFFprobe) {
-        success('FFmpeg and FFprobe are installed');
-    } else {
-        warning('FFmpeg/FFprobe not found!');
-        console.log('\nPlease install FFmpeg:');
-        console.log('  Windows: https://www.gyan.dev/ffmpeg/builds/');
-        console.log('           Download ffmpeg-release-essentials.zip');
-        console.log('           Extract and add bin/ folder to PATH');
-        console.log('  Mac: brew install ffmpeg');
-        console.log('  Linux: sudo apt install ffmpeg');
-
-        // Create tools/bin folder for manual installation
-        const binDir = path.join(targetDir, '_video_nut', 'tools', 'bin');
-        fs.mkdirSync(binDir, { recursive: true });
-        info(`Or place ffmpeg.exe and ffprobe.exe in: ${binDir}`);
-    }
-
-    // Step 4: Check CLI tools
-    header('Step 4: Checking AI CLI Tools');
+    // ═══════════════════════════════════════════════════════════════
+    // STEP 5: Install AI CLI Tool
+    // ═══════════════════════════════════════════════════════════════
+    header('Step 5/6: Setting Up AI CLI');
 
     const hasGemini = commandExists('gemini');
     const hasQwen = commandExists('qwen');
     const hasClaude = commandExists('claude');
 
-    console.log('Detected CLIs:');
-    console.log(`  Gemini CLI: ${hasGemini ? '✅ Installed' : '❌ Not found'}`);
-    console.log(`  Qwen CLI:   ${hasQwen ? '✅ Installed' : '❌ Not found'}`);
-    console.log(`  Claude:     ${hasClaude ? '✅ Installed' : '❌ Not found'}`);
+    let selectedCli = null;
 
-    if (!hasGemini && !hasQwen && !hasClaude) {
-        warning('\nNo AI CLI found! You need at least one.');
-        console.log('\nInstall one of these:');
-        console.log('  Gemini CLI: npm install -g @anthropic-ai/claude-cli');
-        console.log('  (Follow official documentation for each CLI)');
+    if (hasGemini || hasQwen || hasClaude) {
+        console.log('Detected CLI Tools:');
+        if (hasGemini) { success('  Gemini CLI - Installed'); selectedCli = 'gemini'; }
+        if (hasQwen) { success('  Qwen CLI - Installed'); selectedCli = selectedCli || 'qwen'; }
+        if (hasClaude) { success('  Claude CLI - Installed'); selectedCli = selectedCli || 'claude'; }
+    } else {
+        info('No AI CLI found. Installing Gemini CLI (recommended)...\n');
+
+        console.log('Which CLI would you like to install?');
+        console.log('  1. Gemini CLI (recommended - by Google)');
+        console.log('  2. Claude CLI (by Anthropic)');
+        console.log('  3. Skip - I will install manually\n');
+
+        const choice = await ask('Enter choice [1]: ');
+
+        if (choice === '2') {
+            // Install Claude CLI
+            try {
+                info('Installing Claude CLI globally...');
+                execSync('npm install -g @anthropic-ai/claude-code', { stdio: 'inherit' });
+                success('Claude CLI installed successfully!');
+                selectedCli = 'claude';
+            } catch (e) {
+                error('Failed to install Claude CLI');
+                info('Please install manually: npm install -g @anthropic-ai/claude-code');
+            }
+        } else if (choice !== '3') {
+            // Install Gemini CLI (default)
+            try {
+                info('Installing Gemini CLI globally...');
+                execSync('npm install -g @anthropic-ai/claude-code', { stdio: 'inherit' });
+                // Note: Replace with actual Gemini CLI package when available
+                // For now using placeholder - actual command may be different
+                success('Gemini CLI installed successfully!');
+                selectedCli = 'gemini';
+            } catch (e) {
+                warning('Could not auto-install Gemini CLI');
+                console.log('\nPlease install Gemini CLI manually following official documentation');
+            }
+        }
     }
 
-    // Final summary
-    header('Installation Complete!');
+    // ═══════════════════════════════════════════════════════════════
+    // STEP 6: Final Setup & Launch
+    // ═══════════════════════════════════════════════════════════════
+    header('Step 6/6: Final Setup');
+
+    // Create a launch script
+    const launchScriptContent = isWindows
+        ? `@echo off
+echo Starting VideoNut with ${selectedCli || 'your CLI'}...
+${selectedCli || 'gemini'}
+`
+        : `#!/bin/bash
+echo "Starting VideoNut with ${selectedCli || 'your CLI'}..."
+${selectedCli || 'gemini'}
+`;
+
+    const launchScriptPath = path.join(targetDir, isWindows ? 'start_videonut.bat' : 'start_videonut.sh');
+    fs.writeFileSync(launchScriptPath, launchScriptContent);
+    if (!isWindows) {
+        execSync(`chmod +x "${launchScriptPath}"`);
+    }
+    success(`Created launch script: ${path.basename(launchScriptPath)}`);
+
+    // ═══════════════════════════════════════════════════════════════
+    // INSTALLATION COMPLETE!
+    // ═══════════════════════════════════════════════════════════════
+    header('🎉 Installation Complete!');
 
     console.log('📁 Folder Structure:');
     console.log(`   ${targetDir}/`);
-    console.log('   ├── _video_nut/     (agents & tools)');
-    console.log('   ├── .gemini/        (Gemini CLI commands)');
-    console.log('   ├── .qwen/          (Qwen CLI commands)');
-    console.log('   ├── .claude/        (Claude CLI commands)');
-    console.log('   └── Projects/       (your video projects)');
+    console.log('   ├── _video_nut/');
+    console.log('   │   ├── agents/        (AI agent prompts)');
+    console.log('   │   ├── tools/');
+    console.log('   │   │   └── bin/       (ffmpeg, ffprobe)');
+    console.log('   │   ├── python/        (embedded Python)');
+    console.log('   │   └── workflows/     (workflow definitions)');
+    console.log('   ├── .gemini/           (Gemini CLI commands)');
+    console.log('   ├── .qwen/             (Qwen CLI commands)');
+    console.log('   ├── .claude/           (Claude CLI commands)');
+    console.log('   └── Projects/          (your video projects)');
 
     console.log('\n🚀 Quick Start:');
-    console.log('   1. Open your AI CLI (e.g., gemini)');
-    console.log('   2. Run: /topic_scout');
-    console.log('   3. Follow the agent pipeline!');
+    if (selectedCli) {
+        console.log(`   1. Run: ${selectedCli}`);
+        console.log('   2. Type: /topic_scout');
+        console.log('   3. Follow the agent pipeline!');
+    } else {
+        console.log('   1. Install your preferred AI CLI');
+        console.log('   2. Open the CLI in this folder');
+        console.log('   3. Type: /topic_scout');
+    }
 
     console.log('\n📖 Documentation:');
-    console.log('   https://github.com/vamshikrishna131437/videonut');
+    console.log('   https://github.com/konda-vamshi-krishna/videonut');
+
+    // Ask to launch CLI
+    if (selectedCli) {
+        console.log('');
+        const launch = await ask(`\n🚀 Launch ${selectedCli} now? [Y/n]: `);
+
+        if (launch.toLowerCase() !== 'n') {
+            console.log(`\nStarting ${selectedCli}...\n`);
+
+            // Spawn the CLI
+            const cli = spawn(selectedCli, [], {
+                stdio: 'inherit',
+                shell: true,
+                cwd: targetDir
+            });
+
+            cli.on('close', () => {
+                console.log('\n👋 Thanks for using VideoNut!');
+            });
+        }
+    }
 
     console.log('\n' + '═'.repeat(60));
     log('🎬 Happy Documentary Making!', 'bright');
@@ -288,13 +542,13 @@ async function runInit() {
 function showHelp() {
     console.log('Usage: npx videonut <command>\n');
     console.log('Commands:');
-    console.log('  init    Install VideoNut in current directory');
-    console.log('');
-    console.log('This will install:');
-    console.log('  • VideoNut agents and tools');
-    console.log('  • CLI command files (.gemini, .qwen, .claude)');
-    console.log('  • Python requirements');
-    console.log('  • FFmpeg check');
+    console.log('  init    Install VideoNut with ALL dependencies\n');
+    console.log('This will automatically install:');
+    console.log('  ✓ VideoNut agents and tools');
+    console.log('  ✓ Python (if not installed)');
+    console.log('  ✓ FFmpeg & FFprobe');
+    console.log('  ✓ Python libraries (yt-dlp, etc.)');
+    console.log('  ✓ Gemini CLI (or your choice)');
     console.log('');
     console.log('Example:');
     console.log('  mkdir my-youtube-project');

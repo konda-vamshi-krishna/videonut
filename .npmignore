@@ -1,0 +1,10 @@
+# Exclude large binaries - they will be downloaded during install
+tools/bin/
+__pycache__/
+*.pyc
+.git/
+output/
+assets/
+Projects/
+tests/
+*.log

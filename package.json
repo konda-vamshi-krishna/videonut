@@ -1,6 +1,6 @@
 {
   "name": "videonut",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "description": "AI-powered YouTube documentary production pipeline with 10 specialized agents for research, scripting, and asset management",
   "keywords": [
     "youtube",
@@ -33,7 +33,10 @@
   },
   "files": [
     "agents/",
-    "tools/",
+    "tools/downloaders/",
+    "tools/validators/",
+    "tools/logging/",
+    "tools/check_env.py",
     "workflows/",
     "docs/",
     "memory/",

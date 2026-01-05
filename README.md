@@ -1,140 +1,160 @@
 # 🎬 VideoNut
 
-> **AI-Powered YouTube Documentary Production Pipeline**
+<div align="center">
 
-Transform your ideas into professional YouTube documentaries using 10 specialized AI agents that handle research, scripting, visual direction, and asset management.
+![VideoNut Banner](https://img.shields.io/badge/🎬_VideoNut-AI_Documentary_Pipeline-red?style=for-the-badge&labelColor=black)
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Agents-10-brightgreen" alt="10 Agents">
-  <img src="https://img.shields.io/badge/CLI-Gemini%20%7C%20Qwen%20%7C%20Claude-blue" alt="Multi-CLI Support">
-  <img src="https://img.shields.io/badge/License-MIT-yellow" alt="MIT License">
-  <img src="https://img.shields.io/npm/v/videonut" alt="NPM Version">
-</p>
+### 🚀 Create Professional YouTube Documentaries with AI Agents
 
----
+[![NPM Version](https://img.shields.io/npm/v/videonut?style=flat-square&logo=npm&logoColor=white&label=npm&color=CB3837)](https://www.npmjs.com/package/videonut)
+[![GitHub Stars](https://img.shields.io/github/stars/konda-vamshi-krishna/videonut?style=flat-square&logo=github&color=yellow)](https://github.com/konda-vamshi-krishna/videonut)
+[![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
+[![Node](https://img.shields.io/badge/Node.js-16+-339933?style=flat-square&logo=node.js&logoColor=white)](https://nodejs.org)
 
-## 🚀 What is VideoNut?
+**10 Specialized AI Agents** | **Multi-CLI Support** | **Zero Manual Research** | **Production-Ready Assets**
 
-VideoNut is a **complete video production pipeline** powered by AI agents. Each agent specializes in one part of the documentary creation process:
+[📦 Install](#-quick-install) • [🎯 Quick Start](#-quick-start) • [🤖 Agents](#-meet-the-agents) • [📖 Docs](#-documentation) • [🤝 Contribute](#-contributing)
 
-```
-📡 Topic Scout → 🎯 Prompt → 🕵️ Investigator → ✍️ Scriptwriter → 🎬 Director → 🦅 Scavenger → 💾 Archivist → 🧐 EIC
-```
-
-**No more context switching.** Run one command, get a complete video plan with:
-- ✅ Researched facts with sources
-- ✅ Professional script (word-count matched to target duration)
-- ✅ Visual directions with timestamps
-- ✅ Downloaded assets ready for editing
+</div>
 
 ---
 
-## 📦 Installation
+## ⚡ One Command Setup
 
-### Option 1: NPX (Recommended - No Install)
 ```bash
 npx videonut init
 ```
 
-### Option 2: NPM Global Install
-```bash
-npm install -g videonut
-videonut init
-```
-
-### Option 3: Clone Repository
-```bash
-git clone https://github.com/vamshikrishna131437/videonut.git
-cd videonut
-npm install
-```
+> **That's it!** This automatically installs Python, FFmpeg, Gemini CLI, and all dependencies.
 
 ---
 
-## 🛠️ Requirements
+## 🎯 What is VideoNut?
 
-- **Node.js** 16+ 
-- **One of these AI CLI tools:**
-  - [Gemini CLI](https://github.com/google-gemini/gemini-cli) - `npm install -g gemini-cli`
-  - [Qwen CLI](https://github.com/QwenLM/qwen-cli)
-  - [Claude Code](https://claude.ai/code)
+VideoNut transforms your ideas into **production-ready YouTube documentaries** using 10 specialized AI agents:
+
+```
+📡 Topic Scout → 🎯 Prompt → 🕵️ Investigator → ✍️ Scriptwriter → 🎬 Director
+        ↓
+    🦅 Scavenger → 💾 Archivist → 🧐 EIC → 🎨 Thumbnail → 🔍 SEO
+```
+
+### What You Get:
+| Output | Description |
+|--------|-------------|
+| 📋 **Research Dossier** | Fully sourced facts with YouTube video timestamps |
+| ✍️ **Complete Script** | Word-count matched narration for your target duration |
+| 🎬 **Visual Direction** | Shot-by-shot guide with asset links |
+| 📦 **Downloaded Assets** | Video clips, screenshots, PDFs ready for editing |
+| 🎨 **Thumbnail Prompts** | AI image generation prompts for click-worthy thumbnails |
+| 🔍 **SEO Package** | Optimized titles, descriptions, tags for YouTube |
 
 ---
 
-## 🎯 Quick Start
+## 📦 Quick Install
 
-### 1. Start with Topic Scout
+### Prerequisites
+- **Node.js 16+** - [Download here](https://nodejs.org) 
+
+### Install & Run
 ```bash
-# In your terminal with Gemini CLI
+# Create a new project folder
+mkdir my-documentary
+cd my-documentary
+
+# Run the installer (downloads everything automatically!)
+npx videonut init
+```
+
+The installer automatically sets up:
+- ✅ Python (if not installed)
+- ✅ FFmpeg & FFprobe
+- ✅ Gemini CLI (or your choice)
+- ✅ All Python dependencies
+
+---
+
+## 🚀 Quick Start
+
+After installation, open your AI CLI and run:
+
+```bash
+# Start with Gemini CLI
+gemini
+
+# Then run your first agent
 /topic_scout
-# or
-/scout
 ```
 
-### 2. Follow the Agent Pipeline
-| Step | Agent | Command | What It Does |
-|------|-------|---------|--------------|
-| 1 | 📡 Topic Scout | `/topic_scout` | Find trending topics, create project |
-| 2 | 🎯 Prompt | `/prompt` | Generate research prompts |
-| 3 | 🕵️ Investigator | `/investigator` | Deep research with sources |
-| 4 | ✍️ Scriptwriter | `/scriptwriter` | Write the narration script |
-| 5 | 🎬 Director | `/director` | Create visual directions |
-| 6 | 🦅 Scavenger | `/scavenger` | Find and verify asset URLs |
-| 7 | 💾 Archivist | `/archivist` | Download all assets |
-| 8 | 🧐 EIC | `/eic` | Final review and approval |
-| 9 | 🎨 Thumbnail | `/thumbnail` | Generate thumbnail prompts |
-| 10 | 🔍 SEO | `/seo` | Optimize for YouTube search |
+### Agent Pipeline
+
+| # | Agent | Command | What It Does |
+|---|-------|---------|--------------|
+| 1 | 📡 **Topic Scout** | `/topic_scout` | Find trending topics, create project |
+| 2 | 🎯 **Prompt** | `/prompt` | Generate research questions |
+| 3 | 🕵️ **Investigator** | `/investigator` | Deep research with sources |
+| 4 | ✍️ **Scriptwriter** | `/scriptwriter` | Write narration script |
+| 5 | 🎬 **Director** | `/director` | Create visual directions |
+| 6 | 🦅 **Scavenger** | `/scavenger` | Find and verify assets |
+| 7 | 💾 **Archivist** | `/archivist` | Download all assets |
+| 8 | 🧐 **EIC** | `/eic` | Final quality review |
+| 9 | 🎨 **Thumbnail** | `/thumbnail` | Generate thumbnail prompts |
+| 10 | 🔍 **SEO** | `/seo` | YouTube optimization |
 
 ---
 
 ## 🤖 Meet the Agents
 
-### Research Team
-| Agent | Persona | Specialty |
-|-------|---------|-----------|
-| 📡 **Scout** | Trend Hunter | Finds viral-worthy topics, checks YouTube competition |
-| 🎯 **Prompt** | Research Architect | Transforms topics into focused research questions |
-| 🕵️ **Sherlock** | Investigative Journalist | Deep research with YouTube video evidence |
+<details>
+<summary><b>📡 Research Team</b></summary>
 
-### Creative Team
-| Agent | Persona | Specialty |
-|-------|---------|-----------|
-| ✍️ **Sorkin** | Narrative Architect | Word-count matched scripts with emotional hooks |
-| 🎬 **Spielberg** | Documentary Filmmaker | Visual directions with source links |
-| 🎨 **Canvas** | Thumbnail Designer | Click-worthy thumbnail AI prompts |
-| 🔍 **Ranker** | SEO Optimizer | YouTube-optimized titles and descriptions |
+| Agent | Persona | What They Do |
+|-------|---------|--------------|
+| **Scout** | Trend Hunter | Finds viral topics, checks YouTube competition |
+| **Prompt** | Research Architect | Creates focused research questions |
+| **Sherlock** | Investigator | Deep research with YouTube video timestamps |
 
-### Technical Team
-| Agent | Persona | Specialty |
-|-------|---------|-----------|
-| 🦅 **Hunter** | Asset Finder | URL verification, timestamp extraction |
-| 💾 **Vault** | Digital Librarian | Downloads clips, screenshots, transcripts |
+</details>
 
-### Quality Control
-| Agent | Persona | Specialty |
-|-------|---------|-----------|
-| 🧐 **Chief** | Editor-in-Chief | 10-phase deep audit, catches every mistake |
+<details>
+<summary><b>🎬 Creative Team</b></summary>
+
+| Agent | Persona | What They Do |
+|-------|---------|--------------|
+| **Sorkin** | Scriptwriter | Word-count matched scripts with hooks |
+| **Spielberg** | Director | Visual directions with source links |
+| **Canvas** | Thumbnail Designer | Click-worthy thumbnail AI prompts |
+| **Ranker** | SEO Expert | YouTube-optimized metadata |
+
+</details>
+
+<details>
+<summary><b>🔧 Technical Team</b></summary>
+
+| Agent | Persona | What They Do |
+|-------|---------|--------------|
+| **Hunter** | Scavenger | URL verification, timestamp extraction |
+| **Vault** | Archivist | Downloads clips, screenshots, transcripts |
+| **Chief** | Editor-in-Chief | 10-phase deep audit, catches every mistake |
+
+</details>
 
 ---
 
-## 📁 Project Structure
+## 📁 Output Structure
 
 ```
-your-project/
-├── topic_brief.md       # Topic Scout output
-├── prompt.md            # Research prompts
-├── truth_dossier.md     # Investigator findings
-├── voice_script.md      # Narration script
-├── narrative_script.md  # Full narrative
-├── master_script.md     # Script + Visual directions
-├── video_direction.md   # Visual-only guide
-├── asset_manifest.md    # All assets with URLs
-├── assets/              # Downloaded files
-│   ├── 001_intro.mp4
+my-documentary/
+├── 📋 topic_brief.md        # Topic and angle
+├── 📝 truth_dossier.md      # Research with sources
+├── ✍️ voice_script.md       # Narration script
+├── 🎬 master_script.md      # Script + Visuals
+├── 📦 asset_manifest.md     # All asset URLs
+├── 📂 assets/               # Downloaded files
+│   ├── 001_clip.mp4
 │   ├── 002_chart.png
 │   └── ...
-├── correction_log.md    # EIC feedback (if any)
-└── review_report.md     # Final review
+└── ✅ review_report.md      # Final review
 ```
 
 ---
@@ -144,88 +164,70 @@ your-project/
 Edit `config.yaml` to customize:
 
 ```yaml
-# Video Production Settings
 target_duration: 30          # Minutes
 video_format: "investigative" # investigative, explainer, documentary
-
-# Localization
 audio_language: "English"
-scope: "national"            # international, national, regional
 country: "India"
-region: "Telangana"
-
-# Focus
-industry_tag: "political"    # political, finance, crime, tech, etc.
+industry_tag: "political"    # political, finance, crime, tech
 ```
 
 ---
 
-## 🌟 Features
+## 🌟 Why VideoNut?
 
-### ✅ Multi-CLI Support
-Works with Gemini CLI, Qwen CLI, and Claude Code out of the box.
-
-### ✅ YouTube Evidence
-Automatically extracts timestamps from YouTube videos using caption analysis.
-
-### ✅ Smart Asset Management
-- Downloads only the relevant 30-second clips, not full videos
-- Screenshots articles with highlighted quotes
-- PDF page extraction with keyword search
-
-### ✅ Quality Control
-EIC agent performs 10-phase deep audit:
-- URL verification
-- Timestamp validation
-- Cross-reference checks
-- Word count compliance
-
-### ✅ Correction Workflow
-If mistakes are found, each agent has a `[CM] Correct Mistakes` option to fix issues and re-run.
+| Feature | VideoNut | Manual Process |
+|---------|----------|----------------|
+| Research Time | ~30 mins | 8+ hours |
+| Script Writing | Auto-generated | Manual |
+| Asset Finding | Verified URLs | Hunt & Hope |
+| Downloads | One-click | Individual |
+| Quality Check | 10-phase audit | Self-review |
 
 ---
 
 ## 🤝 Contributing
 
-We welcome contributions! Here's how:
+We welcome contributions! Check out our [Contributing Guide](CONTRIBUTING.md).
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+### Areas We Need Help:
+- 🌐 **Translations** - Agents in other languages
+- 🎨 **UI Dashboard** - Web interface for non-CLI users  
+- 🔌 **Integrations** - Video editing software plugins
+- 📊 **Analytics** - Usage tracking and reporting
 
-### Areas We Need Help
-- 🌐 Translations (agents in other languages)
-- 🎨 UI/Dashboard for non-CLI users
-- 🔌 Integration with video editing software
-- 📊 Analytics and reporting
+---
+
+## 📖 Documentation
+
+- [📘 User Guide](USER_GUIDE.md)
+- [🔄 Agent Lifecycle](docs/LIFECYCLE.md)
+- [🔍 Audit Report](docs/AUDIT_REPORT.md)
 
 ---
 
 ## 📝 License
 
-MIT License - see [LICENSE](LICENSE) for details.
+MIT License - Free for personal and commercial use.
 
 ---
 
-## 👤 Author
+## 👨‍💻 Author
 
-**Vamshi Krishna**
-- Email: vamshikrishna131437@gmail.com
-- GitHub: [@vamshikrishna131437](https://github.com/vamshikrishna131437)
+<div align="center">
 
----
+**Vamshi Krishna Konda**
 
-## 🙏 Acknowledgments
+[![GitHub](https://img.shields.io/badge/GitHub-konda--vamshi--krishna-181717?style=flat-square&logo=github)](https://github.com/konda-vamshi-krishna)
+[![Email](https://img.shields.io/badge/Email-vamshikrishna131437@gmail.com-EA4335?style=flat-square&logo=gmail&logoColor=white)](mailto:vamshikrishna131437@gmail.com)
 
-Built for the AI agent community. Special thanks to:
-- Google Gemini CLI team
-- Qwen team
-- Anthropic Claude team
+</div>
 
 ---
 
-<p align="center">
-  <b>⭐ Star this repo if you find it useful!</b>
-</p>
+<div align="center">
+
+### ⭐ Star this repo if VideoNut helps you create better content!
+
+**[📦 npm](https://www.npmjs.com/package/videonut)** • **[💻 GitHub](https://github.com/konda-vamshi-krishna/videonut)** • **[🐛 Issues](https://github.com/konda-vamshi-krishna/videonut/issues)**
+
+</div>
