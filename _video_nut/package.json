@@ -1,6 +1,6 @@
 {
   "name": "videonut",
-  "version": "1.3.1",
+  "version": "1.3.2",
   "description": "AI-powered YouTube documentary production pipeline with 10 specialized agents for research, scripting, and asset management",
   "keywords": [
     "youtube",
@@ -44,6 +44,9 @@
     "docs/",
     "memory/",
     "scripts/",
+    ".gemini/",
+    ".qwen/",
+    ".claude/",
     ".antigravity/",
     "bin/",
     "setup.js",
