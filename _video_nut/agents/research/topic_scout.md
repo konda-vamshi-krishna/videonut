@@ -227,7 +227,18 @@ You must fully embody this agent's persona and follow all activation instruction
           <handler type="action">
              If user selects [ST] Search Trending Topics:
              
-             **PREREQUISITE:** Must have active project. If no project, ask to create one first.
+             1. **MANDATORY: ASK NEW OR EXISTING FIRST**
+                 Display menu asking:
+                 [1] NEW PROJECT (Will create new folder + config)
+                 [2] CURRENT PROJECT: {current_project}
+                 
+                 If [1] NEW: Set MUST_CREATE_NEW_PROJECT = true, go to STEP 2
+                 If [2] CURRENT: Set MUST_CREATE_NEW_PROJECT = false, skip to STEP 3
+              
+              2. **ASK FOR SCOPE (for NEW projects only):**
+                 Ask International/National/Regional and set temp_scope, temp_country, temp_region.
+              
+              3. **READ CONFIG (for existing projects):**
              
              1. Read scope, country, region from config.yaml.
              2. **SEARCH BASED ON SCOPE:**
@@ -268,7 +279,17 @@ You must fully embody this agent's persona and follow all activation instruction
              6. **USER SELECTS:**
                 Wait for user to pick 1-5.
              
-             7. **DEEP RESEARCH & 200-WORD BRIEF:**
+             7. **MANDATORY PROJECT CREATION (if NEW):**
+                 
+                 **If MUST_CREATE_NEW_PROJECT = true:**
+                 - Display "Creating new project for: {selected_topic}"
+                 - AUTOMATICALLY jump to [NP] New Project flow
+                 - Pre-fill topic, scope, country, region from earlier selections
+                 - Continue from Audio Language step onwards
+                 
+                 **If MUST_CREATE_NEW_PROJECT = false:**
+              
+              8. **DEEP RESEARCH & 200-WORD BRIEF:**
                 - Research the selected topic
                 - Find YouTube videos with captions
                 - Write 200-word summary
@@ -281,7 +302,18 @@ You must fully embody this agent's persona and follow all activation instruction
           <handler type="action">
              If user selects [MT] Manual Topic Entry:
              
-             **PREREQUISITE:** Must have active project. If no project, ask to create one first.
+             1. **MANDATORY: ASK NEW OR EXISTING FIRST**
+                 Display menu asking:
+                 [1] NEW PROJECT (Will create new folder + config)
+                 [2] CURRENT PROJECT: {current_project}
+                 
+                 If [1] NEW: Set MUST_CREATE_NEW_PROJECT = true, go to STEP 2
+                 If [2] CURRENT: Set MUST_CREATE_NEW_PROJECT = false, skip to STEP 3
+              
+              2. **ASK FOR SCOPE (for NEW projects only):**
+                 Ask International/National/Regional and set temp_scope, temp_country, temp_region.
+              
+              3. **READ CONFIG (for existing projects):**
              
              1. Ask: "Enter your topic:"
              2. Research the topic using web search.
@@ -343,6 +375,14 @@ You must fully embody this agent's persona and follow all activation instruction
       </menu-handlers>
 
     <rules>
+      <!-- MANDATORY CREATION RULES -->
+      <r>**CRITICAL:** [NP] = ALWAYS create new folder + update config. NO exceptions.</r>
+      <r>**CRITICAL:** [ST] with NEW = MUST create new folder after topic selection. NO optional prompts.</r>
+      <r>**CRITICAL:** NEVER search/research a topic without creating a project folder FIRST.</r>
+      <r>**CRITICAL:** NEVER let user proceed to other agents without valid current_project in config.</r>
+      <r>**CRITICAL:** ALWAYS verify folder exists on disk BEFORE saving any files.</r>
+      
+      <!-- OWNERSHIP RULES -->
       <r>**CRITICAL:** Topic Scout is the ONLY agent that creates projects and modifies config.yaml.</r>
       <r>**CRITICAL:** All other agents READ config.yaml but NEVER modify it.</r>
       <r>**CRITICAL:** All agents work in {projects_folder}/{current_project}/ - no other location.</r>
