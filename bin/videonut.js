@@ -459,38 +459,40 @@ async function runInit() {
         info('  No AI CLI currently installed');
     }
 
-    // Always offer installation choice (Gemini recommended)
+    // Always offer installation choice
     console.log('\n📦 CLI Installation:');
-    console.log('  1. Install Gemini CLI (recommended - by Google)');
-    console.log('  2. Install Claude CLI (by Anthropic)');
-    console.log('  3. Install Qwen CLI (by Alibaba)');
+    console.log('  1. Install BOTH Gemini + Qwen (⭐ RECOMMENDED)');
+    console.log('     → Gemini: Best for content writing & creativity');
+    console.log('     → Qwen: Best for instruction following & agent tasks');
+    console.log('  2. Install Gemini CLI only (by Google)');
+    console.log('  3. Install Qwen CLI only (by Alibaba)');
     if (hasGemini || hasQwen || hasClaude) {
         console.log('  4. Skip - Use existing CLI\n');
     } else {
         console.log('  4. Skip - I will install manually\n');
     }
 
-    const choice = await ask('Enter choice [1 for Gemini]: ');
+    const choice = await ask('Enter choice [1 for BOTH]: ');
 
     if (choice === '2') {
-        // Install Claude CLI
+        // Install Gemini CLI only
         try {
-            info('Installing Claude CLI globally...');
-            execSync('npm install -g @anthropic-ai/claude-code', { stdio: 'inherit' });
-            success('Claude CLI installed successfully!');
-            info('Run "claude" to start Claude CLI');
-            selectedCli = 'claude';
+            info('Installing Gemini CLI globally...');
+            execSync('npm install -g @google/gemini-cli', { stdio: 'inherit' });
+            success('Gemini CLI installed successfully!');
+            info('Run "gemini" to start - Best for content writing');
+            selectedCli = 'gemini';
         } catch (e) {
-            error('Failed to install Claude CLI');
-            info('Please install manually: npm install -g @anthropic-ai/claude-code');
+            error('Failed to install Gemini CLI');
+            info('Please install manually: npm install -g @google/gemini-cli');
         }
     } else if (choice === '3') {
-        // Install Qwen CLI
+        // Install Qwen CLI only
         try {
             info('Installing Qwen CLI globally...');
             execSync('npm install -g @qwen-code/qwen-code', { stdio: 'inherit' });
             success('Qwen CLI installed successfully!');
-            info('Run "qwen" to start Qwen CLI');
+            info('Run "qwen" to start - Best for instruction following');
             selectedCli = 'qwen';
         } catch (e) {
             error('Failed to install Qwen CLI');
@@ -503,17 +505,31 @@ async function runInit() {
         else if (hasClaude) selectedCli = 'claude';
         info('Skipped CLI installation');
     } else {
-        // Install Gemini CLI (default for choice 1 or empty)
+        // Install BOTH Gemini + Qwen (default for choice 1 or empty)
+        info('Installing BOTH Gemini CLI and Qwen CLI...\n');
+
+        // Install Gemini
         try {
             info('Installing Gemini CLI globally...');
             execSync('npm install -g @google/gemini-cli', { stdio: 'inherit' });
-            success('Gemini CLI installed successfully!');
-            info('Run "gemini" to start Gemini CLI');
-            selectedCli = 'gemini';
+            success('Gemini CLI installed! (Best for content writing)');
         } catch (e) {
-            warning('Could not auto-install Gemini CLI');
-            info('Please install manually: npm install -g @google/gemini-cli');
+            warning('Could not install Gemini CLI');
         }
+
+        // Install Qwen
+        try {
+            info('Installing Qwen CLI globally...');
+            execSync('npm install -g @qwen-code/qwen-code', { stdio: 'inherit' });
+            success('Qwen CLI installed! (Best for instruction following)');
+        } catch (e) {
+            warning('Could not install Qwen CLI');
+        }
+
+        selectedCli = 'gemini'; // Default to Gemini for launch
+        console.log('\n✅ Both CLIs installed!');
+        console.log('   Use "gemini" for creative content');
+        console.log('   Use "qwen" for agent/instruction tasks');
     }
 
     // ═══════════════════════════════════════════════════════════════

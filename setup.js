@@ -297,46 +297,64 @@ async function main() {
         info('  No AI CLI currently installed');
     }
 
-    // Always offer installation choice (Gemini recommended)
+    // Always offer installation choice
     console.log('\n📦 CLI Installation:');
-    console.log('  1. Install Gemini CLI (recommended - by Google)');
-    console.log('  2. Install Claude CLI (by Anthropic)');
-    console.log('  3. Install Qwen CLI (by Alibaba)');
+    console.log('  1. Install BOTH Gemini + Qwen (⭐ RECOMMENDED)');
+    console.log('     → Gemini: Best for content writing & creativity');
+    console.log('     → Qwen: Best for instruction following & agent tasks');
+    console.log('  2. Install Gemini CLI only (by Google)');
+    console.log('  3. Install Qwen CLI only (by Alibaba)');
     if (hasGemini || hasQwen || hasClaude) {
         console.log('  4. Skip - Use existing CLI\n');
     } else {
         console.log('  4. Skip - I will install manually\n');
     }
 
-    const answer = await ask('Enter choice [1 for Gemini]: ');
+    const answer = await ask('Enter choice [1 for BOTH]: ');
 
     if (answer === '2') {
-        try {
-            info('Installing Claude CLI globally...');
-            execSync('npm install -g @anthropic-ai/claude-code', { stdio: 'inherit' });
-            success('Claude CLI installed! Run "claude" to start.');
-        } catch (e) {
-            warning('Could not install CLI.');
-            info('Install manually: npm install -g @anthropic-ai/claude-code');
-        }
-    } else if (answer === '3') {
-        try {
-            info('Installing Qwen CLI globally...');
-            execSync('npm install -g @qwen-code/qwen-code', { stdio: 'inherit' });
-            success('Qwen CLI installed! Run "qwen" to start.');
-        } catch (e) {
-            warning('Could not install CLI.');
-            info('Install manually: npm install -g @qwen-code/qwen-code');
-        }
-    } else if (answer !== '4') {
+        // Install Gemini CLI only
         try {
             info('Installing Gemini CLI globally...');
             execSync('npm install -g @google/gemini-cli', { stdio: 'inherit' });
-            success('Gemini CLI installed! Run "gemini" to start.');
+            success('Gemini CLI installed! (Best for content writing)');
         } catch (e) {
-            warning('Could not install CLI.');
+            warning('Could not install Gemini CLI.');
             info('Install manually: npm install -g @google/gemini-cli');
         }
+    } else if (answer === '3') {
+        // Install Qwen CLI only
+        try {
+            info('Installing Qwen CLI globally...');
+            execSync('npm install -g @qwen-code/qwen-code', { stdio: 'inherit' });
+            success('Qwen CLI installed! (Best for instruction following)');
+        } catch (e) {
+            warning('Could not install Qwen CLI.');
+            info('Install manually: npm install -g @qwen-code/qwen-code');
+        }
+    } else if (answer !== '4') {
+        // Install BOTH Gemini + Qwen (default)
+        info('Installing BOTH Gemini CLI and Qwen CLI...\n');
+
+        try {
+            info('Installing Gemini CLI globally...');
+            execSync('npm install -g @google/gemini-cli', { stdio: 'inherit' });
+            success('Gemini CLI installed! (Best for content writing)');
+        } catch (e) {
+            warning('Could not install Gemini CLI.');
+        }
+
+        try {
+            info('Installing Qwen CLI globally...');
+            execSync('npm install -g @qwen-code/qwen-code', { stdio: 'inherit' });
+            success('Qwen CLI installed! (Best for instruction following)');
+        } catch (e) {
+            warning('Could not install Qwen CLI.');
+        }
+
+        console.log('\n✅ Both CLIs installed!');
+        console.log('   Use "gemini" for creative content');
+        console.log('   Use "qwen" for agent/instruction tasks');
     }
 
     // ═══════════════════════════════════════════════════════════════
