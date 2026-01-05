@@ -477,14 +477,38 @@ async function runInit() {
     // ═══════════════════════════════════════════════════════════════
     header('Step 6/6: Final Setup');
 
-    // Create a launch script
+    // Create paths for local tools
+    const localPythonPath = path.join(videoNutDir, 'python');
+    const localToolsPath = path.join(videoNutDir, 'tools', 'bin');
+
+    // Create a launch script that adds local Python and FFmpeg to PATH
     const launchScriptContent = isWindows
         ? `@echo off
-echo Starting VideoNut with ${selectedCli || 'your CLI'}...
+REM Add local Python and FFmpeg to PATH for this session
+set PATH=${localPythonPath};${localPythonPath}\\Scripts;${localToolsPath};%PATH%
+
+echo.
+echo ====================================
+echo   VideoNut Environment Ready!
+echo   Python: ${localPythonPath}
+echo   FFmpeg: ${localToolsPath}
+echo ====================================
+echo.
+echo Starting ${selectedCli || 'your CLI'}...
 ${selectedCli || 'gemini'}
 `
         : `#!/bin/bash
-echo "Starting VideoNut with ${selectedCli || 'your CLI'}..."
+# Add local Python and FFmpeg to PATH for this session
+export PATH="${localPythonPath}:${localPythonPath}/bin:${localToolsPath}:$PATH"
+
+echo ""
+echo "===================================="
+echo "  VideoNut Environment Ready!"
+echo "  Python: ${localPythonPath}"
+echo "  FFmpeg: ${localToolsPath}"
+echo "===================================="
+echo ""
+echo "Starting ${selectedCli || 'your CLI'}..."
 ${selectedCli || 'gemini'}
 `;
 
@@ -494,6 +518,7 @@ ${selectedCli || 'gemini'}
         execSync(`chmod +x "${launchScriptPath}"`);
     }
     success(`Created launch script: ${path.basename(launchScriptPath)}`);
+    info('Use this script to start with Python & FFmpeg in PATH!');
 
     // ═══════════════════════════════════════════════════════════════
     // INSTALLATION COMPLETE!
