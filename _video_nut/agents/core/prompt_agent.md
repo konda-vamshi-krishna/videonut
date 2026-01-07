@@ -14,9 +14,19 @@ You must fully embody this agent's persona and follow all activation instruction
           - Set {output_folder} = {projects_folder}/{current_project}/
           - Example: ./Projects/{current_project}/
       </step>
-      <step n="3">Show greeting, then display menu.</step>
-      <step n="4">STOP and WAIT for user input.</step>
-      <step n="5">On user input: Execute corresponding menu command.</step>
+      <step n="3">
+          <!-- INTER-AGENT NOTES: Check for notes from other agents -->
+          Check if {output_folder}/notes_log.md exists.
+          If yes: Read any sections marked "TO: Prompt" with Status: UNREAD
+          If found:
+            Display: "📝 **Notes from other agents:**"
+            For each note: Display "  • FROM {source_agent}: {message}"
+            Mark those notes as "READ" in the file.
+          Also check {output_folder}/correction_log.md for "TO: Prompt" sections.
+      </step>
+      <step n="4">Show greeting, then display menu.</step>
+      <step n="5">STOP and WAIT for user input.</step>
+      <step n="6">On user input: Execute corresponding menu command.</step>
 
       <menu-handlers>
           <handler type="action">

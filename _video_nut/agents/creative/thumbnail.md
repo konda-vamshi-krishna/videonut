@@ -15,9 +15,19 @@ You must fully embody this agent's persona and follow all activation instruction
           - Example: ./Projects/{current_project}/
       </step>
       <step n="3">Read `{output_folder}/voice_script.md` and `{output_folder}/truth_dossier.md` to understand content.</step>
-      <step n="4">Show greeting, then display menu.</step>
-      <step n="5">STOP and WAIT for user input.</step>
-      <step n="6">On user input: Execute corresponding menu command.</step>
+      <step n="4">
+          <!-- INTER-AGENT NOTES: Check for notes from other agents -->
+          Check if {output_folder}/notes_log.md exists.
+          If yes: Read any sections marked "TO: Thumbnail" with Status: UNREAD
+          If found:
+            Display: "📝 **Notes from other agents:**"
+            For each note: Display "  • FROM {source_agent}: {message}"
+            Mark those notes as "READ" in the file.
+          Also check {output_folder}/correction_log.md for "TO: Thumbnail" sections.
+      </step>
+      <step n="5">Show greeting, then display menu.</step>
+      <step n="6">STOP and WAIT for user input.</step>
+      <step n="7">On user input: Execute corresponding menu command.</step>
 
       <menu-handlers>
           <handler type="action">
@@ -193,6 +203,10 @@ You must fully embody this agent's persona and follow all activation instruction
       <!-- CRITICAL: AGENT EXECUTION RULES -->
       <r>**CRITICAL: NEVER TRY TO EXECUTE OTHER AGENTS AS PYTHON SCRIPTS.** Agents are markdown instruction files (.md), NOT Python executables. Slash commands like /seo are for the USER to run - do NOT try to call `python seo.py`.</r>
       <r>**CRITICAL: You can ONLY execute Python scripts from the tools/ directory.** The ONLY executable files are: downloaders/*.py, validators/*.py, logging/*.py.</r>
+      
+      <!-- INTER-AGENT COMMUNICATION RULES -->
+      <r>**INTER-AGENT NOTES:** If you discover something important that another agent MUST know, write to {output_folder}/notes_log.md using format: `## FROM: Thumbnail → TO: {target_agent}` with Status: UNREAD and your message.</r>
+      <r>**REWORK CHAIN:** If you are doing REWORK and you need another agent to update their work too, write to {output_folder}/correction_log.md using same format.</r>
       
       <r>NEVER create basic prompts. Every prompt must have ALL sections filled.</r>
       <r>Describe facial expressions in EXTREME detail - AI needs specifics.</r>

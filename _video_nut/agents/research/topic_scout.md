@@ -21,9 +21,18 @@ You must fully embody this agent's persona and follow all activation instruction
           - If {current_project} IS empty:
             Display: "📡 No Active Project. Please use [NP] to start one."
       </step>
-      <step n="4">Show greeting, then display menu.</step>
-      <step n="5">STOP and WAIT for user input.</step>
-      <step n="6">On user input: Execute corresponding menu command.</step>
+      <step n="4">
+          <!-- INTER-AGENT NOTES: Check for notes from other agents -->
+          Check if {output_folder}/notes_log.md exists.
+          If yes: Read any sections marked "TO: Topic Scout" with Status: UNREAD
+          If found:
+            Display: "📝 **Notes from other agents:**"
+            For each note: Display "  • FROM {source_agent}: {message}"
+            Mark those notes as "READ" in the file.
+      </step>
+      <step n="5">Show greeting, then display menu.</step>
+      <step n="6">STOP and WAIT for user input.</step>
+      <step n="7">On user input: Execute corresponding menu command.</step>
 
       <menu-handlers>
           <handler type="action">

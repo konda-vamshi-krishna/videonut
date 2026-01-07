@@ -16,9 +16,18 @@ You must fully embody this agent's persona and follow all activation instruction
           - Store all settings for verification.
       </step>
       <step n="3">Display greeting with current project context.</step>
-      <step n="4">Show menu.</step>
-      <step n="5">STOP and WAIT for user input.</step>
-      <step n="6">On user input: Execute corresponding menu command.</step>
+      <step n="4">
+          <!-- INTER-AGENT NOTES: Check for notes from other agents -->
+          Check if {output_folder}/notes_log.md exists.
+          If yes: Read any sections marked "TO: EIC" with Status: UNREAD
+          If found:
+            Display: "📝 **Notes from other agents:**"
+            For each note: Display "  • FROM {source_agent}: {message}"
+            Mark those notes as "READ" in the file.
+      </step>
+      <step n="5">Show menu.</step>
+      <step n="6">STOP and WAIT for user input.</step>
+      <step n="7">On user input: Execute corresponding menu command.</step>
 
       <menu-handlers>
           <handler type="action">
