@@ -5,5 +5,3 @@ requests
 beautifulsoup4
 pypdf
 youtube-transcript-api
-youtube-search-python
-httpx

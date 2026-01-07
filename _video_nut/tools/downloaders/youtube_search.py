@@ -2,24 +2,19 @@
 """
 YouTube Search Tool for VideoNut
 Searches YouTube for videos matching a query and returns structured results.
-Uses youtube-search-python library for searching without API key.
+Uses yt-dlp for reliable, actively maintained YouTube searching.
 """
 
 import sys
 import argparse
 import json
+import subprocess
+import re
 from datetime import datetime
-
-try:
-    from youtubesearchpython import VideosSearch, Video
-except ImportError:
-    print("Error: youtube-search-python not installed. Install with: pip install youtube-search-python")
-    sys.exit(1)
-
 
 def search_youtube(query, max_results=10, filter_year=None):
     """
-    Search YouTube for videos matching the query.
+    Search YouTube for videos matching the query using yt-dlp.
     
     Args:
         query: Search query string
@@ -30,47 +25,102 @@ def search_youtube(query, max_results=10, filter_year=None):
         List of video dictionaries with title, url, duration, views, upload_date, channel
     """
     try:
-        videos_search = VideosSearch(query, limit=max_results * 2)  # Get extra to filter
-        results = videos_search.result()
+        # Use yt-dlp to search YouTube
+        search_query = f"ytsearch{max_results * 2}:{query}"  # Get extra to filter
+        
+        cmd = [
+            "yt-dlp",
+            "--flat-playlist",
+            "--dump-json",
+            "--no-warnings",
+            "--ignore-errors",
+            search_query
+        ]
+        
+        result = subprocess.run(
+            cmd, 
+            capture_output=True, 
+            text=True, 
+            timeout=60
+        )
+        
+        if result.returncode != 0 and not result.stdout:
+            print(f"Error: yt-dlp search failed", file=sys.stderr)
+            return []
         
         videos = []
-        for video in results.get('result', []):
-            video_data = {
-                'title': video.get('title', 'Unknown'),
-                'url': video.get('link', ''),
-                'video_id': video.get('id', ''),
-                'duration': video.get('duration', 'Unknown'),
-                'views': video.get('viewCount', {}).get('text', 'Unknown'),
-                'upload_date': video.get('publishedTime', 'Unknown'),
-                'channel': video.get('channel', {}).get('name', 'Unknown'),
-                'description': video.get('descriptionSnippet', [{}])[0].get('text', '') if video.get('descriptionSnippet') else '',
-                'thumbnail': video.get('thumbnails', [{}])[0].get('url', '') if video.get('thumbnails') else ''
-            }
-            
-            # Filter by year if specified
-            if filter_year:
-                upload_text = video_data['upload_date'].lower()
-                # Check if it contains year info
-                if str(filter_year) in upload_text or f"{filter_year}" in video_data['title']:
-                    videos.append(video_data)
-                elif 'year' in upload_text:
-                    # Try to parse "X years ago"
-                    try:
-                        years_ago = int(upload_text.split()[0])
-                        current_year = datetime.now().year
-                        video_year = current_year - years_ago
-                        if video_year <= filter_year:
-                            videos.append(video_data)
-                    except:
-                        pass
-            else:
+        for line in result.stdout.strip().split('\n'):
+            if not line:
+                continue
+            try:
+                video = json.loads(line)
+                
+                # Extract duration - yt-dlp provides it in seconds
+                duration_secs = video.get('duration')
+                if duration_secs:
+                    mins, secs = divmod(int(duration_secs), 60)
+                    hours, mins = divmod(mins, 60)
+                    if hours > 0:
+                        duration_str = f"{hours}:{mins:02d}:{secs:02d}"
+                    else:
+                        duration_str = f"{mins}:{secs:02d}"
+                else:
+                    duration_str = "Unknown"
+                
+                # Format view count
+                view_count = video.get('view_count')
+                if view_count:
+                    if view_count >= 1000000:
+                        views_str = f"{view_count/1000000:.1f}M views"
+                    elif view_count >= 1000:
+                        views_str = f"{view_count/1000:.1f}K views"
+                    else:
+                        views_str = f"{view_count} views"
+                else:
+                    views_str = "Unknown"
+                
+                video_data = {
+                    'title': video.get('title', 'Unknown'),
+                    'url': video.get('url') or f"https://www.youtube.com/watch?v={video.get('id', '')}",
+                    'video_id': video.get('id', ''),
+                    'duration': duration_str,
+                    'duration_seconds': duration_secs,
+                    'views': views_str,
+                    'view_count': view_count,
+                    'upload_date': video.get('upload_date', 'Unknown'),
+                    'channel': video.get('channel') or video.get('uploader', 'Unknown'),
+                    'description': (video.get('description') or '')[:200],
+                    'thumbnail': video.get('thumbnail', '')
+                }
+                
+                # Filter by year if specified
+                if filter_year:
+                    upload_date = video_data['upload_date']
+                    if upload_date and upload_date != 'Unknown':
+                        # yt-dlp provides date as YYYYMMDD
+                        try:
+                            video_year = int(upload_date[:4])
+                            if video_year != filter_year:
+                                continue
+                        except (ValueError, TypeError):
+                            pass
+                
                 videos.append(video_data)
-            
-            if len(videos) >= max_results:
-                break
+                
+                if len(videos) >= max_results:
+                    break
+                    
+            except json.JSONDecodeError:
+                continue
         
         return videos
         
+    except subprocess.TimeoutExpired:
+        print("Error: YouTube search timed out", file=sys.stderr)
+        return []
+    except FileNotFoundError:
+        print("Error: yt-dlp not found. Install with: pip install yt-dlp", file=sys.stderr)
+        return []
     except Exception as e:
         print(f"Error searching YouTube: {str(e)}", file=sys.stderr)
         return []
@@ -102,18 +152,39 @@ def format_results(videos, output_format='text'):
 
 
 def get_video_details(video_url):
-    """Get detailed information about a specific video"""
+    """Get detailed information about a specific video using yt-dlp"""
     try:
-        video_info = Video.getInfo(video_url)
+        cmd = [
+            "yt-dlp",
+            "--dump-json",
+            "--no-download",
+            "--no-warnings",
+            video_url
+        ]
+        
+        result = subprocess.run(
+            cmd, 
+            capture_output=True, 
+            text=True, 
+            timeout=30
+        )
+        
+        if result.returncode != 0:
+            return None
+            
+        video_info = json.loads(result.stdout)
+        
+        duration_secs = video_info.get('duration', 0)
+        
         return {
             'title': video_info.get('title', 'Unknown'),
-            'duration_seconds': video_info.get('duration', {}).get('secondsText', 'Unknown'),
-            'views': video_info.get('viewCount', {}).get('text', 'Unknown'),
-            'upload_date': video_info.get('publishDate', 'Unknown'),
-            'channel': video_info.get('channel', {}).get('name', 'Unknown'),
-            'description': video_info.get('description', '')[:500],
-            'is_live': video_info.get('isLiveNow', False),
-            'category': video_info.get('category', 'Unknown')
+            'duration_seconds': duration_secs,
+            'views': video_info.get('view_count', 'Unknown'),
+            'upload_date': video_info.get('upload_date', 'Unknown'),
+            'channel': video_info.get('channel') or video_info.get('uploader', 'Unknown'),
+            'description': (video_info.get('description') or '')[:500],
+            'is_live': video_info.get('is_live', False),
+            'category': video_info.get('categories', ['Unknown'])[0] if video_info.get('categories') else 'Unknown'
         }
     except Exception as e:
         print(f"Error getting video details: {str(e)}", file=sys.stderr)
@@ -122,7 +193,7 @@ def get_video_details(video_url):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Search YouTube for videos. Returns video titles, URLs, and metadata.",
+        description="Search YouTube for videos using yt-dlp. Returns video titles, URLs, and metadata.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
