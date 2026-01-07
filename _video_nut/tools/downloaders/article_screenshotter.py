@@ -43,7 +43,12 @@ def find_quote_in_page(page, quote):
     locator = page.get_by_text(quote, exact=False)
     if locator.count() > 0:
         print(f"  ✅ Found with Strategy 1")
-        return locator.first
+        # Convert Locator to ElementHandle for use with page.evaluate()
+        try:
+            return locator.first.element_handle(timeout=5000)
+        except Exception as e:
+            print(f"  ⚠️ Could not get element handle: {e}")
+            pass
     
     # Strategy 2: Try first few words (in case quote is long)
     words = quote.split()
@@ -53,7 +58,12 @@ def find_quote_in_page(page, quote):
         locator = page.get_by_text(short_quote, exact=False)
         if locator.count() > 0:
             print(f"  ✅ Found with Strategy 2")
-            return locator.first
+            # Convert Locator to ElementHandle for use with page.evaluate()
+            try:
+                return locator.first.element_handle(timeout=5000)
+            except Exception as e:
+                print(f"  ⚠️ Could not get element handle: {e}")
+                pass
     
     # Strategy 3: JavaScript search across all text nodes
     print(f"  Strategy 3: JavaScript deep search...")

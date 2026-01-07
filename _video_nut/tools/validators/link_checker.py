@@ -20,13 +20,13 @@ def check_link(url):
             'Upgrade-Insecure-Requests': '1',
         }
 
-        response = requests.head(url, headers=headers, timeout=5, allow_redirects=True)
+        response = requests.head(url, headers=headers, timeout=15, allow_redirects=True)
 
         if response.status_code == 200:
             return True, "OK"
         else:
             # Retry with GET if HEAD fails (some servers block HEAD)
-            response = requests.get(url, headers=headers, timeout=5, stream=True)
+            response = requests.get(url, headers=headers, timeout=15, stream=True)
             if response.status_code == 200:
                 return True, "OK"
             return False, f"Status Code: {response.status_code}"

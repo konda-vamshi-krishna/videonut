@@ -3,7 +3,12 @@ import os
 import argparse
 import time
 from random import uniform
-from playwright.sync_api import sync_playwright
+
+try:
+    from playwright.sync_api import sync_playwright
+except ImportError:
+    print("Error: Playwright not installed. Install with: pip install playwright && playwright install chromium")
+    sys.exit(1)
 
 def take_screenshot(url, output_path):
     # Add random delay to implement rate limiting

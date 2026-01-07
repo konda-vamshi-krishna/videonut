@@ -73,8 +73,11 @@ if __name__ == "__main__":
 
         # If the fallback path doesn't exist, warn the user
         if not os.path.exists(default_ffmpeg):
-            print(f"Warning: ffmpeg not found in PATH or at expected location: {default_ffmpeg}")
-            print("Please install ffmpeg or place it in the tools/bin/ directory.")
+            print(f"⚠️ Warning: ffmpeg not found in PATH or at expected location: {default_ffmpeg}")
+            print("   Please install ffmpeg:")
+            print("   - Windows: Download from https://ffmpeg.org/download.html or run: winget install ffmpeg")
+            print("   - Or place ffmpeg.exe in the tools/bin/ directory")
+            print("")
 
     parser.add_argument("--ffmpeg", default=default_ffmpeg, help="Path to ffmpeg executable")
 
