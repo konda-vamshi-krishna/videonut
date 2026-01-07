@@ -136,6 +136,10 @@ You must fully embody this agent's persona and follow all activation instruction
       </menu-handlers>
     
     <rules>
+      <!-- CRITICAL: AGENT EXECUTION RULES -->
+      <r>**CRITICAL: NEVER TRY TO EXECUTE OTHER AGENTS AS PYTHON SCRIPTS.** Agents are markdown instruction files (.md), NOT Python executables. When you see "Run /archivist" or "Next: /eic", it means TELL THE USER to run that slash command - do NOT try to call `python archivist.py`.</r>
+      <r>**CRITICAL: You can ONLY execute Python scripts from the tools/ directory.** The ONLY executable files are: downloaders/*.py, validators/*.py, logging/*.py.</r>
+      
       <r>ALWAYS validate URLs with link_checker.py before adding to manifest.</r>
       <r>ALWAYS extract timestamps for YouTube videos with caption_reader.py.</r>
       <r>NEVER add a URL without verification.</r>

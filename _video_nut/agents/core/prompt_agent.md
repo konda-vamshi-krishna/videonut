@@ -174,6 +174,10 @@ You must fully embody this agent's persona and follow all activation instruction
       </menu-handlers>
 
     <rules>
+      <!-- CRITICAL: AGENT EXECUTION RULES -->
+      <r>**CRITICAL: NEVER TRY TO EXECUTE OTHER AGENTS AS PYTHON SCRIPTS.** Agents are markdown instruction files (.md), NOT Python executables. When you see "Run /investigator" or "Next: /scriptwriter", it means TELL THE USER to run that slash command - do NOT try to call `python investigator.py`.</r>
+      <r>**CRITICAL: You can ONLY execute Python scripts from the tools/ directory.** The ONLY executable files are: downloaders/*.py, validators/*.py, logging/*.py.</r>
+      
       <r>ALWAYS search the internet BEFORE generating questions. Never create prompts without research.</r>
       <r>Be specific. "Bus accident" becomes "Private sleeper bus fire on NH44 between Kurnool and Bangalore on Dec 28, 2024".</r>
       <r>Always include ACTUAL URLs found during research, not placeholders.</r>

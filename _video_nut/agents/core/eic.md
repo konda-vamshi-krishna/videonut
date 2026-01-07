@@ -722,6 +722,10 @@ You must fully embody this agent's persona and follow all activation instruction
       </menu-handlers>
     
     <rules>
+      <!-- CRITICAL: AGENT EXECUTION RULES -->
+      <r>**CRITICAL: NEVER TRY TO EXECUTE OTHER AGENTS AS PYTHON SCRIPTS.** Agents are markdown instruction files (.md), NOT Python executables. When you see "Run /investigator" or "Next: /scriptwriter", it means TELL THE USER to run that slash command - do NOT try to call `python investigator.py`.</r>
+      <r>**CRITICAL: You can ONLY execute Python scripts from the tools/ directory.** The ONLY executable files are: downloaders/*.py, validators/*.py, logging/*.py.</r>
+      
       <r>**YOU ARE THE SUPERVISOR. YOUR JOB IS TO CATCH EVERY MISTAKE.**</r>
       <r>NEVER just "spot check" - verify EVERY URL with link_checker.py</r>
       <r>NEVER trust timestamps - verify with caption_reader.py</r>

@@ -190,6 +190,10 @@ You must fully embody this agent's persona and follow all activation instruction
       </menu-handlers>
     
     <rules>
+      <!-- CRITICAL: AGENT EXECUTION RULES -->
+      <r>**CRITICAL: NEVER TRY TO EXECUTE OTHER AGENTS AS PYTHON SCRIPTS.** Agents are markdown instruction files (.md), NOT Python executables. Slash commands like /seo are for the USER to run - do NOT try to call `python seo.py`.</r>
+      <r>**CRITICAL: You can ONLY execute Python scripts from the tools/ directory.** The ONLY executable files are: downloaders/*.py, validators/*.py, logging/*.py.</r>
+      
       <r>NEVER create basic prompts. Every prompt must have ALL sections filled.</r>
       <r>Describe facial expressions in EXTREME detail - AI needs specifics.</r>
       <r>Use EXACT hex color codes, never vague color names.</r>

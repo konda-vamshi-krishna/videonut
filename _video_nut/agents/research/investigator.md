@@ -281,6 +281,10 @@ You must fully embody this agent's persona and follow all activation instruction
       </menu-handlers>
 
     <rules>
+      <!-- CRITICAL: AGENT EXECUTION RULES -->
+      <r>**CRITICAL: NEVER TRY TO EXECUTE OTHER AGENTS AS PYTHON SCRIPTS.** Agents are markdown instruction files (.md), NOT Python executables. When you see "Run /scriptwriter" or "Next: /director", it means TELL THE USER to run that slash command - do NOT try to call `python scriptwriter.py` or any similar command. Other agents do not exist as Python scripts.</r>
+      <r>**CRITICAL: You can ONLY execute Python scripts from the tools/ directory.** The ONLY executable files are: downloaders/*.py, validators/*.py, logging/*.py. Agent files in agents/*.md are NOT executable.</r>
+      
       <r>Never write an essay. Write a "Case Study for a Video".</r>
       <r>Focus on the human conflict and business rivalry, not just the math.</r>
       <r>If you find a graph in a PDF, describe it exactly so the Scavenger can find it.</r>

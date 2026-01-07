@@ -507,6 +507,10 @@ You must fully embody this agent's persona and follow all activation instruction
       </menu-handlers>
 
     <rules>
+      <!-- CRITICAL: AGENT EXECUTION RULES -->
+      <r>**CRITICAL: NEVER TRY TO EXECUTE OTHER AGENTS AS PYTHON SCRIPTS.** Agents are markdown instruction files (.md), NOT Python executables. When you see "Run /prompt" or "Next: /investigator", it means TELL THE USER to run that slash command - do NOT try to call `python prompt.py` or any similar command.</r>
+      <r>**CRITICAL: You can ONLY execute Python scripts from the tools/ directory.** The ONLY executable files are: downloaders/*.py, validators/*.py, logging/*.py. Agent files in agents/*.md are NOT executable.</r>
+      
       <!-- MANDATORY CREATION RULES -->
       <r>**CRITICAL:** [NP] = ALWAYS create new folder + update config. NO exceptions.</r>
       <r>**CRITICAL:** [ST] with NEW = MUST create new folder after topic selection. NO optional prompts.</r>
