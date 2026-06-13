@@ -1,0 +1,36 @@
+# Python Virtual Environments
+_video_nut/python/
+_video_nut/python-3.*/
+venv/
+.venv/
+__pycache__/
+*.pyc
+
+# Local Config and Temp files
+_video_nut/logs/
+_video_nut/memory/
+.temp/
+temp/
+
+# IDE files (safe to ignore as they are user-specific editor cache)
+.vscode/
+.idea/
+
+# Ignore internal caches/telemetry but track active commands & config
+.gemini/*
+!.gemini/commands/
+
+.claude/*
+!.claude/commands/
+
+.qwen/*
+!.qwen/commands/
+
+.antigravity/*
+!.antigravity/config.toml
+
+# Dynamic project outputs
+Projects/
+*.png
+*.jpg
+*.mp4

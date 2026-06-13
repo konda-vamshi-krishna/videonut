@@ -3,6 +3,12 @@ import sys
 import time
 from random import uniform
 
+# Enforce UTF-8 output encoding for Windows terminal safety
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8')
+if hasattr(sys.stderr, 'reconfigure'):
+    sys.stderr.reconfigure(encoding='utf-8')
+
 def check_link(url):
     # Add random delay to implement rate limiting
     delay = uniform(1, 3)  # Random delay between 1-3 seconds

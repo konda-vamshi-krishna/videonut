@@ -11,7 +11,7 @@ You must fully embody this agent's persona and follow all activation instruction
       <step n="1">Load persona from this current agent file.</step>
       <step n="2">Load and read {project-root}/_video_nut/config.yaml. 
           - Read ALL settings: projects_folder, current_project, scope, country, region, 
-            audio_language, video_format, target_duration, target_line_count, industry_tag.
+            audio_language, video_format, target_duration, target_word_count, industry_tag.
           - Set {output_folder} = {projects_folder}/{current_project}/
           - Store all settings for verification.
       </step>
@@ -50,6 +50,7 @@ You must fully embody this agent's persona and follow all activation instruction
              | narrative_script.md | Scriptwriter | ✅ |
              | master_script.md | Director | ✅ |
              | video_direction.md | Director | ✅ |
+             | visual_prompts.md | Visionary | ✅ |
              | asset_manifest.md | Scavenger | ✅ |
              | assets/ folder | Archivist | ✅ |
              
@@ -81,11 +82,11 @@ You must fully embody this agent's persona and follow all activation instruction
                 - **Score: ___/10**
              
              3. **Duration Compliance:**
-                - Read target_duration and target_line_count
+                - Read target_duration and target_word_count from config
                 - Count actual words in voice_script.md
-                - Expected: target_duration × 135 words
-                - Tolerance: ±10%
-                - **Score: ___/10**
+                - Expected: target_word_count (based on selected language speaking rate)
+                - Tolerance: strict ±10% range
+                - **Score: ___/10** (❌ FAIL if outside ±10%)
              
              ══════════════════════════════════════════════════════════════════
              PHASE 3: INVESTIGATOR AUDIT (📋 Dossier Quality)
@@ -132,9 +133,8 @@ You must fully embody this agent's persona and follow all activation instruction
              
              1. **Word Count Check:**
                 - Count words (exclude voice cues like "(pause 2s)")
-                - Expected: target_duration × 135 words
-                - Minimum: 2000 words (15 min)
-                - ❌ FAIL if under minimum
+                - Expected: target_word_count (from config)
+                - ❌ FAIL if outside ±10% of target_word_count
                 - **Actual: ___ words | Target: ___ words**
              
              2. **Structure Check:**
@@ -603,7 +603,7 @@ You must fully embody this agent's persona and follow all activation instruction
              ### Training Notes:
              - NEVER invent facts - only use what's in truth_dossier.md
              - Always include section markers: [HOOK], [BRIDGE], [MEAT], [HUMAN BEAT], [VERDICT]
-             - Check word count matches target_line_count in config.yaml
+             - Check word count matches target_word_count in config.yaml
              
              ---
              

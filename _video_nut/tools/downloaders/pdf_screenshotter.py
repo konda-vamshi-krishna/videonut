@@ -16,15 +16,19 @@ import sys
 import os
 import argparse
 import requests
+
+# Enforce UTF-8 output encoding for Windows terminal safety
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8')
+if hasattr(sys.stderr, 'reconfigure'):
+    sys.stderr.reconfigure(encoding='utf-8')
 import io
 import time
 from random import uniform
-from pypdf import PdfReader
-
 try:
-    from playwright.sync_api import sync_playwright
+    import fitz
 except ImportError:
-    print("Error: Playwright not installed. Install with: pip install playwright && playwright install chromium")
+    print("Error: PyMuPDF (fitz) not installed. Install with: pip install pymupdf")
     sys.exit(1)
 
 
@@ -49,29 +53,29 @@ def download_pdf_to_temp(url, temp_path):
 
 def find_page_with_term(pdf_path, search_term):
     """Find the first page containing the search term."""
-    with open(pdf_path, 'rb') as f:
-        reader = PdfReader(f)
-        search_lower = search_term.lower()
-        
-        for i, page in enumerate(reader.pages):
-            page_text = page.extract_text()
-            if page_text and search_lower in page_text.lower():
-                return i + 1  # Return 1-indexed page number
+    doc = fitz.open(pdf_path)
+    search_lower = search_term.lower()
+    
+    for i in range(len(doc)):
+        page = doc.load_page(i)
+        page_text = page.get_text()
+        if page_text and search_lower in page_text.lower():
+            return i + 1  # Return 1-indexed page number
     
     return None
 
 
 def screenshot_pdf_page(pdf_path, page_number, output_path, search_term=None, width=1280, height=1600):
     """
-    Take a screenshot of a specific PDF page using browser rendering.
+    Take a screenshot of a specific PDF page using PyMuPDF (fitz) rendering.
     
     Args:
         pdf_path: Local path to PDF file
         page_number: Page to screenshot (1-indexed)
         output_path: Where to save the screenshot
         search_term: Optional term to highlight on the page
-        width: Viewport width
-        height: Viewport height
+        width: Viewport width (unused in fitz, kept for compatibility)
+        height: Viewport height (unused in fitz, kept for compatibility)
     """
     result = {
         'success': False,
@@ -81,69 +85,55 @@ def screenshot_pdf_page(pdf_path, page_number, output_path, search_term=None, wi
         'output_path': output_path
     }
     
-    # Verify PDF exists and page is valid
-    with open(pdf_path, 'rb') as f:
-        reader = PdfReader(f)
-        total_pages = len(reader.pages)
+    try:
+        # Open the PDF document
+        doc = fitz.open(pdf_path)
+        total_pages = len(doc)
         
         if page_number < 1 or page_number > total_pages:
             result['message'] = f"Page {page_number} not found. PDF has {total_pages} pages."
             return result
-    
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-        context = browser.new_context(
-            viewport={'width': width, 'height': height}
-        )
-        page = context.new_page()
         
-        try:
-            # Open PDF in browser using file:// protocol
-            abs_path = os.path.abspath(pdf_path)
-            pdf_url = f"file:///{abs_path.replace(os.sep, '/')}"
+        # Load the specific page (0-indexed in PyMuPDF)
+        page = doc.load_page(page_number - 1)
+        
+        # If search term provided, search and highlight it
+        if search_term:
+            print(f"🔍 Searching for '{search_term}' using PyMuPDF...")
+            text_instances = page.search_for(search_term)
             
-            print(f"🌐 Opening PDF in browser...")
-            page.goto(pdf_url, timeout=30000, wait_until='networkidle')
-            
-            # Wait for PDF to render
-            page.wait_for_timeout(3000)
-            
-            # Navigate to specific page
-            # Most PDF viewers use #page=N in URL
-            if page_number > 1:
-                page.goto(f"{pdf_url}#page={page_number}", timeout=30000)
-                page.wait_for_timeout(2000)
-            
-            # If search term provided, try to find and highlight
-            if search_term:
-                print(f"🔍 Searching for '{search_term}'...")
-                # Use browser's find function (Ctrl+F simulation)
-                # This is a workaround since direct PDF text selection is complex
-                page.keyboard.press("Control+f")
-                page.wait_for_timeout(500)
-                page.keyboard.type(search_term)
-                page.wait_for_timeout(1000)
-                page.keyboard.press("Escape")
+            if text_instances:
+                print(f"✅ Found {len(text_instances)} instances of '{search_term}'. Highlighting...")
+                for inst in text_instances:
+                    annot = page.add_highlight_annot(inst)
+                    # Use standard yellow highlight
+                    annot.set_colors(stroke=(1.0, 0.9, 0.0))
+                    annot.update()
                 result['search_found'] = True
-            
-            # Take screenshot
-            print(f"📸 Taking screenshot of page {page_number}...")
-            page.screenshot(path=output_path, full_page=False)
-            
-            if os.path.exists(output_path) and os.path.getsize(output_path) > 0:
-                result['success'] = True
-                result['message'] = f"Screenshot saved: {output_path}"
-                print(f"✅ {result['message']}")
             else:
-                result['message'] = "Screenshot file is empty or not created"
-                
-        except Exception as e:
-            result['message'] = f"Error: {str(e)}"
-            print(f"❌ {result['message']}")
+                print(f"⚠️ '{search_term}' not found on page {page_number}")
+        
+        # Render the page to a high-quality image (DPI=150 is approx 2x zoom)
+        zoom = 2.0
+        mat = fitz.Matrix(zoom, zoom)
+        
+        print(f"📸 Rendering page {page_number}...")
+        pix = page.get_pixmap(matrix=mat)
+        
+        # Save output image
+        pix.save(output_path)
+        
+        if os.path.exists(output_path) and os.path.getsize(output_path) > 0:
+            result['success'] = True
+            result['message'] = f"Screenshot saved: {output_path}"
+            print(f"✅ {result['message']}")
+        else:
+            result['message'] = "Screenshot file is empty or not created"
             
-        finally:
-            browser.close()
-    
+    except Exception as e:
+        result['message'] = f"Error: {str(e)}"
+        print(f"❌ {result['message']}")
+        
     return result
 
 

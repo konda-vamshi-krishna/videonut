@@ -3,6 +3,12 @@ import sys
 import subprocess
 import argparse
 
+# Enforce UTF-8 output encoding for Windows terminal safety
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8')
+if hasattr(sys.stderr, 'reconfigure'):
+    sys.stderr.reconfigure(encoding='utf-8')
+
 def download_clip(url, start_time, end_time, output_path, ffmpeg_path):
     """
     Downloads a specific clip from a YouTube video using yt-dlp.

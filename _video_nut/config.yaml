@@ -1,5 +1,5 @@
 # VideoNut Configuration
-# This file is managed by Topic Scout agent. All other agents READ ONLY.
+# This file is managed by Topic Scout agent. All other agents READ ONLY (except EIC updating correction tracking).
 
 # ═══════════════════════════════════════════════════════════════════
 # USER SETTINGS
@@ -18,7 +18,7 @@ current_project: "gemini_2025-12-30_SEBI-Hindenburg_004"
 # ═══════════════════════════════════════════════════════════════════
 video_format: "Investigative Documentary"
 target_duration: 20
-target_line_count: 2700
+target_word_count: 2700
 audio_language: "Telugu"
 
 # ═══════════════════════════════════════════════════════════════════

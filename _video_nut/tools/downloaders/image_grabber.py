@@ -3,6 +3,12 @@ import sys
 import requests
 import argparse
 import mimetypes
+
+# Enforce UTF-8 output encoding for Windows terminal safety
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8')
+if hasattr(sys.stderr, 'reconfigure'):
+    sys.stderr.reconfigure(encoding='utf-8')
 from urllib.parse import urlparse
 
 def is_safe_image_type(content_type, url):
@@ -46,6 +52,7 @@ def download_image(url, output_path):
     if dir_name:
         os.makedirs(dir_name, exist_ok=True)
 
+    # Use standard Chrome User-Agent to bypass security filters (e.g. Wikimedia 403 blocks)
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
     }
@@ -53,29 +60,20 @@ def download_image(url, output_path):
     try:
         print(f"Downloading image from: {url}")
 
-        # First, make a HEAD request to check content type and size
-        head_response = requests.head(url, headers=headers, timeout=10)
-        content_type = head_response.headers.get('content-type', '').lower()
+        # Perform stream-based GET request directly to avoid double requests (HEAD + GET)
+        response = requests.get(url, headers=headers, stream=True, timeout=15)
+        response.raise_for_status()
 
-        # Validate content type
+        # Validate content type from headers
+        content_type = response.headers.get('content-type', '').lower()
         if not is_safe_image_type(content_type, url):
             print(f"Security Error: Content type '{content_type}' is not a safe image type.")
             sys.exit(1)
 
         # Check file size (limit to 50MB)
-        file_size = get_file_size(head_response)
+        file_size = get_file_size(response)
         if file_size > 50 * 1024 * 1024:  # 50MB
             print(f"Security Error: File size {file_size} bytes exceeds 50MB limit.")
-            sys.exit(1)
-
-        # Actually download the file
-        response = requests.get(url, headers=headers, stream=True, timeout=10)
-        response.raise_for_status()
-
-        # Double-check content type after download
-        downloaded_content_type = response.headers.get('content-type', '').lower()
-        if not is_safe_image_type(downloaded_content_type, url):
-            print(f"Security Error: Downloaded content type '{downloaded_content_type}' is not a safe image type.")
             sys.exit(1)
 
         # Write file in chunks with size validation
@@ -94,6 +92,8 @@ def download_image(url, output_path):
 
     except Exception as e:
         print(f"Failed to download image: {e}")
+        if "429" in str(e) or "403" in str(e):
+            print("💡 Tip: The server is rate-limiting or blocking automated bots. Try downloading the image manually or using a proxy.")
         sys.exit(1)
 
 if __name__ == "__main__":

@@ -4,6 +4,12 @@ import argparse
 import time
 from random import uniform
 
+# Enforce UTF-8 output encoding for Windows terminal safety
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8')
+if hasattr(sys.stderr, 'reconfigure'):
+    sys.stderr.reconfigure(encoding='utf-8')
+
 try:
     from playwright.sync_api import sync_playwright
 except ImportError:

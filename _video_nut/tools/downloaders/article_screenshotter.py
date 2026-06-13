@@ -18,6 +18,12 @@ import argparse
 import time
 from random import uniform
 
+# Enforce UTF-8 output encoding for Windows terminal safety
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8')
+if hasattr(sys.stderr, 'reconfigure'):
+    sys.stderr.reconfigure(encoding='utf-8')
+
 try:
     from playwright.sync_api import sync_playwright
 except ImportError:
@@ -184,6 +190,45 @@ def take_quote_screenshot(url, output_path, quote=None, highlight=True, width=12
                         page.wait_for_timeout(500)
                 except:
                     pass
+
+            # Purge cookie/consent/paywall banners and overlays from DOM
+            print("🧹 Purging cookie banners, overlays, and ads from DOM...")
+            try:
+                page.evaluate('''() => {
+                    const hideSelectors = [
+                        // Cookie banners / consent
+                        '[id*="cookie"]', '[class*="cookie"]', '[id*="consent"]', '[class*="consent"]',
+                        '[id*="consent-banner"]', '[class*="consent-banner"]',
+                        // Paywalls / newsletters / subscription modals
+                        '[id*="paywall"]', '[class*="paywall"]', '[id*="gate"]', '[class*="gate"]',
+                        '[id*="newsletter"]', '[class*="newsletter"]', '[id*="subscribe"]', '[class*="subscribe"]',
+                        '[class*="modal-open"]', '[class*="modal-backdrop"]', '.modal', '.fade.show',
+                        // Ads / overlays
+                        'iframe[id*="google_ads"]', '.ad-container', '.advertisement', '#ad-slot',
+                        // Fixed overlays that block view
+                        '[style*="position: fixed"]', '[style*="position:absolute"]'
+                    ];
+                    
+                    // Hide matching elements
+                    hideSelectors.forEach(selector => {
+                        try {
+                            document.querySelectorAll(selector).forEach(el => {
+                                // Don't hide the main article or main content
+                                const tag = el.tagName.toLowerCase();
+                                if (tag !== 'article' && tag !== 'main' && !el.contains(document.querySelector('article'))) {
+                                    el.style.setProperty('display', 'none', 'important');
+                                }
+                            });
+                        } catch (e) {}
+                    });
+
+                    // Restore scrolling if blocked by overlay script
+                    document.body.style.setProperty('overflow', 'auto', 'important');
+                    document.documentElement.style.setProperty('overflow', 'auto', 'important');
+                }''')
+                page.wait_for_timeout(500)
+            except Exception as purge_err:
+                print(f"  ⚠️ DOM purge warning: {purge_err}")
             
             if quote:
                 print(f"🔍 Searching for quote: '{quote[:60]}{'...' if len(quote) > 60 else ''}'")

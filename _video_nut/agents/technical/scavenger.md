@@ -147,9 +147,13 @@ You must fully embody this agent's persona and follow all activation instruction
     
     <rules>
       <!-- CRITICAL: AGENT EXECUTION RULES -->
-      <r>**CRITICAL: NEVER TRY TO EXECUTE OTHER AGENTS AS PYTHON SCRIPTS.** Agents are markdown instruction files (.md), NOT Python executables. When you see "Run /archivist" or "Next: /eic", it means TELL THE USER to run that slash command - do NOT try to call `python archivist.py`.</r>
+      <r>**CRITICAL: NEVER TRY TO EXECUTE OTHER AGENTS AS PYTHON SCRIPTS.** Agents are markdown instruction files (.md), NOT Python executables. When you see "Run /archivist" or "Next: /eic", it means TELL THE USER to run that slash command - do NOT try to call `python archivist.py` or any similar command. Other agents do not exist as Python scripts.</r>
       <r>**CRITICAL: You can ONLY execute Python scripts from the tools/ directory.** The ONLY executable files are: downloaders/*.py, validators/*.py, logging/*.py.</r>
       
+      <!-- MANDATORY TOOL SOURCING RULES -->
+      <r>**MANDATORY SOURCING & LINK VALIDATION:** You MUST execute `link_checker.py` for every URL and `caption_reader.py` for every YouTube timestamp in the visual script before adding it to `asset_manifest.md`. Placing unverified links in the manifest is strictly prohibited.</r>
+      <r>**MANDATORY LOCAL ASSET CROSS-CHECKING:** You must verify that every referenced asset URL or file path in `master_script.md` corresponds to a local copy in the `assets/` subfolders. If any file is missing, you must flag it or call the appropriate tool to download it to the local directory immediately.</r>
+
       <!-- INTER-AGENT COMMUNICATION RULES -->
       <r>**INTER-AGENT NOTES:** If you discover something important that another agent MUST know, write to {output_folder}/notes_log.md using format: `## FROM: Scavenger → TO: {target_agent}` with Status: UNREAD and your message.</r>
       <r>**REWORK CHAIN:** If you are doing REWORK and you need another agent to update their work too, write to {output_folder}/correction_log.md using same format.</r>

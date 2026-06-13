@@ -17,13 +17,23 @@ def validate_truth_dossier(file_path):
         content = f.read()
     
     # Check for essential sections
-    required_sections = ['The Investigation Blueprint', 'The Findings', 'The Angle', 'The Conflict']
+    required_sections = [
+        ('Investigation Questions', 'The Investigation Blueprint'),
+        ('Findings', 'The Findings'),
+        ('The Angle', 'Angle'),
+        ('The Conflict', 'Conflict')
+    ]
     missing_sections = []
     
-    for section in required_sections:
-        if f'# {section}' not in content and f'## {section}' not in content:
-            missing_sections.append(section)
-    
+    for opt1, opt2 in required_sections:
+        found = False
+        for opt in [opt1, opt2]:
+            if f'# {opt}' in content or f'## {opt}' in content or f'### {opt}' in content:
+                found = True
+                break
+        if not found:
+            missing_sections.append(opt1)
+            
     if missing_sections:
         return False, f"Missing required sections: {missing_sections}"
     
@@ -42,12 +52,22 @@ def validate_narrative_script(file_path):
         content = f.read()
     
     # Check for essential narrative elements
-    required_elements = ['The Hook', 'The Bridge', 'The Meat', 'The Verdict']
+    required_elements = [
+        ('[HOOK]', 'The Hook', '# Hook', '## Hook'),
+        ('[BRIDGE]', 'The Bridge', '# Bridge', '## Bridge'),
+        ('[MEAT]', 'The Meat', '# Meat', '## Meat'),
+        ('[VERDICT]', 'The Verdict', '# Verdict', '## Verdict')
+    ]
     missing_elements = []
     
-    for element in required_elements:
-        if element not in content:
-            missing_elements.append(element)
+    for options in required_elements:
+        found = False
+        for opt in options:
+            if opt in content:
+                found = True
+                break
+        if not found:
+            missing_elements.append(options[0])
     
     if missing_elements:
         return False, f"Missing required narrative elements: {missing_elements}"

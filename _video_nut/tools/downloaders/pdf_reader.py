@@ -6,8 +6,15 @@ from random import uniform
 from pypdf import PdfReader
 import argparse
 import re
+import os
 
-def read_pdf(url, search_term=None, page_number=None):
+# Enforce UTF-8 output encoding for Windows terminal safety
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8')
+if hasattr(sys.stderr, 'reconfigure'):
+    sys.stderr.reconfigure(encoding='utf-8')
+
+def read_pdf(url, search_term=None, page_number=None, output_path=None):
     """
     Read a PDF from URL with optional search and page selection.
     
@@ -15,6 +22,7 @@ def read_pdf(url, search_term=None, page_number=None):
         url: URL of the PDF
         search_term: Optional term to search for in the PDF
         page_number: Optional specific page to read (1-indexed)
+        output_path: Optional path to save the raw downloaded PDF file
     """
     # Add random delay to implement rate limiting
     delay = uniform(1, 3)
@@ -28,6 +36,15 @@ def read_pdf(url, search_term=None, page_number=None):
     try:
         response = requests.get(url, headers=headers, timeout=30)
         response.raise_for_status()
+
+        # Save the actual PDF file to the assets folder if output_path is provided
+        if output_path:
+            dir_name = os.path.dirname(output_path)
+            if dir_name:
+                os.makedirs(dir_name, exist_ok=True)
+            with open(output_path, 'wb') as pdf_file:
+                pdf_file.write(response.content)
+            print(f"💾 Raw PDF downloaded and saved to: {output_path}")
 
         f = io.BytesIO(response.content)
         reader = PdfReader(f)
@@ -148,15 +165,19 @@ Examples:
   
   # Read specific page
   python pdf_reader.py --url "https://example.com/report.pdf" --page 5
+  
+  # Download and save the raw PDF file locally
+  python pdf_reader.py --url "https://example.com/report.pdf" --output "./Projects/my_project/assets/documents/report.pdf"
         """
     )
     
     parser.add_argument("--url", required=True, help="URL of the PDF document")
     parser.add_argument("--search", "-s", help="Search for specific term and show context")
     parser.add_argument("--page", "-p", type=int, help="Read specific page number (1-indexed)")
+    parser.add_argument("--output", "-o", help="Path to save the raw downloaded PDF file")
     
     args = parser.parse_args()
-    read_pdf(args.url, search_term=args.search, page_number=args.page)
+    read_pdf(args.url, search_term=args.search, page_number=args.page, output_path=args.output)
 
 
 if __name__ == "__main__":
