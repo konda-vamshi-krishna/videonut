@@ -11,9 +11,10 @@ This guide walks you through the entire lifecycle using a real-world example: **
 1.  **🕵️ The Investigator:** Research & Facts. (Finds the story).
 2.  **✍️ The Scriptwriter:** Narrative & Emotion. (Writes the words).
 3.  **🎬 The Director:** Vision & Sourcing. (Visualizes the story).
-4.  **🦅 The Scavenger:** Asset Hunting. (Finds the clips/images).
-5.  **💾 The Archivist:** Asset Storage. (Downloads the files).
-6.  **🧐 The Editor-in-Chief (EIC):** Quality Control. (Validates everything).
+4.  **🎨 The Visionary:** AI Art & Video Prompts. (Creates prompts for custom scenes).
+5.  **🦅 The Scavenger:** Asset Hunting. (Finds the clips/images).
+6.  **💾 The Archivist:** Asset Storage. (Downloads the files).
+7.  **🧐 The Editor-in-Chief (EIC):** Quality Control. (Validates everything).
 
 ---
 
@@ -35,6 +36,15 @@ This guide walks you through the entire lifecycle using a real-world example: **
 1.  **Type:** `/director`
 2.  **Agent Action:** Spielberg reads the `narrative_script.md`. He designs shots for every paragraph and finds the specific source URLs for the evidence.
 3.  **Result:** A file is created at `_output/master_script.md`.
+
+---
+
+### Step 3.5: The Prompter (Visionary)
+**Goal:** Create highly detailed prompts for AI-generated images and videos where stock or real-world assets are missing.
+
+1.  **Type:** `/visionary`
+2.  **Agent Action:** Visionary reads the `video_direction.md` and `master_script.md`. He identifies scenes marked for custom generation, creates consistent visual style guides, and writes copy-pasteable prompts for Midjourney, Flux, Sora, or Runway.
+3.  **Result:** A file is created at `_output/visual_prompts.md`.
 
 ---
 

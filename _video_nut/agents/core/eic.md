@@ -204,6 +204,31 @@ You must fully embody this agent's persona and follow all activation instruction
              **DIRECTOR TOTAL SCORE: ___/50**
              
              ══════════════════════════════════════════════════════════════════
+             PHASE 5.5: VISIONARY AUDIT (🎨 AI Visual Prompts)
+             ══════════════════════════════════════════════════════════════════
+             
+             Open visual_prompts.md and verify:
+             
+             1. **Scene Coverage:**
+                - Verify every scene marked [CREATE] in video_direction.md has a corresponding prompt in visual_prompts.md.
+                - **Score: ___/15**
+             
+             2. **Visual Consistency:**
+                - Do all prompts maintain thematic visual consistency (matching aesthetic, aspect ratio like --ar 16:9, lighting direction)?
+                - **Score: ___/15**
+             
+             3. **Prompt Detail & Art Style:**
+                - Are the prompts descriptive and cinematic? (No generic or placeholder prompts like "a ship in the water").
+                - Do they specify lighting, color palette, camera lens, angle, and environment?
+                - **Score: ___/10**
+             
+             4. **Format & Separation:**
+                - Are image prompts and video prompts clearly distinguished and formatted inside markdown code blocks for easy copy-pasting?
+                - **Score: ___/10**
+             
+             **VISIONARY TOTAL SCORE: ___/50**
+             
+             ══════════════════════════════════════════════════════════════════
              PHASE 6: SCAVENGER AUDIT (🦅 URL & Timestamp Verification)
              ══════════════════════════════════════════════════════════════════
              
@@ -327,8 +352,9 @@ You must fully embody this agent's persona and follow all activation instruction
              │  🦅 Scavenger   │  __/50   │  ✅/⚠️/❌             │
              │  💾 Archivist   │  __/50   │  ✅/⚠️/❌             │
              │  🔗 Cross-Ref   │  __/50   │  ✅/⚠️/❌             │
+             │  🎨 Visionary   │  __/50   │  ✅/⚠️/❌             │
              ├─────────────────────────────────────────────────────┤
-             │  TOTAL          │  __/320  │  __%                  │
+             │  TOTAL          │  __/370  │  __%                  │
              ├─────────────────────────────────────────────────────┤
              │  VERDICT:       │                                  │
              │  ✅ APPROVED (>80%) / ⚠️ NEEDS WORK (60-80%) /      │
@@ -366,10 +392,11 @@ You must fully embody this agent's persona and follow all activation instruction
              | Investigator | __/50 | ✅/⚠️/❌ | {issues} |
              | Scriptwriter | __/50 | ✅/⚠️/❌ | {issues} |
              | Director | __/50 | ✅/⚠️/❌ | {issues} |
+             | Visionary | __/50 | ✅/⚠️/❌ | {issues} |
              | Scavenger | __/50 | ✅/⚠️/❌ | {issues} |
              | Archivist | __/50 | ✅/⚠️/❌ | {issues} |
              | Cross-Reference | __/50 | ✅/⚠️/❌ | {issues} |
-             | **TOTAL** | **__/320** | **__%** | |
+             | **TOTAL** | **__/370** | **__%** | |
              
              ---
              
@@ -419,6 +446,13 @@ You must fully embody this agent's persona and follow all activation instruction
              - Scene Count: {count} / {target range}
              - Source Tags: {complete/incomplete}
              - Timestamps: {present/missing}
+             - Score: __/50
+             - Issues: {list}
+             
+             ### 🎨 Visionary
+             - visual_prompts.md Present: {yes/no}
+             - Scene Coverage: {complete/incomplete}
+             - Art Style Uniformity: {yes/no}
              - Score: __/50
              - Issues: {list}
              
@@ -623,6 +657,21 @@ You must fully embody this agent's persona and follow all activation instruction
              
              ---
              
+             ## 🎨 VISIONARY (visionary)
+             
+             **Status:** {✅ No Issues / 🔴 Errors Found}
+             
+             ### Errors Found:
+             | # | Error | Location | Why It's Wrong | How to Fix |
+             |---|-------|----------|----------------|------------|
+             | 1 | Prompt too basic | visual_prompts.md | No visual details | Elaborate composition, lighting, camera specs |
+             
+             ### Training Notes:
+             - AI image and video generators need high detail
+             - Always include camera movements (for video) or lighting/lens parameters (for images)
+             
+             ---
+             
              ## 🦅 SCAVENGER (scavenger)
              
              **Status:** {✅ No Issues / 🔴 Errors Found}
@@ -661,11 +710,12 @@ You must fully embody this agent's persona and follow all activation instruction
              
              | If This Agent Fixes | Then These Must Re-Run |
              |---------------------|------------------------|
-             | Topic Scout | Prompt → Investigator → Scriptwriter → Director → Scavenger → Archivist |
-             | Prompt Agent | Investigator → Scriptwriter → Director → Scavenger → Archivist |
-             | Investigator | Scriptwriter → Director → Scavenger → Archivist |
-             | Scriptwriter | Director → Scavenger → Archivist |
-             | Director | Scavenger → Archivist |
+             | Topic Scout | Prompt → Investigator → Scriptwriter → Director → Visionary → Scavenger → Archivist |
+             | Prompt Agent | Investigator → Scriptwriter → Director → Visionary → Scavenger → Archivist |
+             | Investigator | Scriptwriter → Director → Visionary → Scavenger → Archivist |
+             | Scriptwriter | Director → Visionary → Scavenger → Archivist |
+             | Director | Visionary → Scavenger → Archivist |
+             | Visionary | Scavenger → Archivist |
              | Scavenger | Archivist |
              | Archivist | (None - end of chain) |
              
@@ -680,6 +730,7 @@ You must fully embody this agent's persona and follow all activation instruction
              - [ ] Investigator corrections applied
              - [ ] Scriptwriter corrections applied
              - [ ] Director corrections applied
+             - [ ] Visionary corrections applied
              - [ ] Scavenger corrections applied
              - [ ] Archivist corrections applied
              - [ ] Chain reaction completed

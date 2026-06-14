@@ -26,6 +26,7 @@ class VideoNutOrchestrator:
             "investigation_complete": False,
             "scriptwriting_complete": False, 
             "direction_complete": False,
+            "visionary_complete": False,
             "scavenging_complete": False,
             "archiving_complete": False,
             "last_step": "none"
@@ -159,6 +160,32 @@ class VideoNutOrchestrator:
             print("❌ Master script not found. Please run director manually.")
             return False
     
+    def run_visionary(self):
+        """Run visionary phase"""
+        if self.checkpoints.get("visionary_complete", False):
+            print("⏭️ Visionary already completed, skipping...")
+            return True
+            
+        print("\n🎨 Starting Visionary Phase...")
+        
+        # Check if prerequisite exists
+        master_script_path = os.path.join(self.project_path, "master_script.md")
+        if not os.path.exists(master_script_path):
+            print("❌ Prerequisite file missing: master_script.md")
+            return False
+        
+        # Check for output
+        prompts_path = os.path.join(self.project_path, "visual_prompts.md")
+        if os.path.exists(prompts_path):
+            self.checkpoints["visionary_complete"] = True
+            self.checkpoints["last_step"] = "visionary"
+            self.save_checkpoints()
+            print("✅ Visionary step marked as complete")
+            return True
+        else:
+            print("❌ Visual prompts not found. Please run visionary manually.")
+            return False
+     
     def run_scavenging(self):
         """Run scavenging phase"""
         if self.checkpoints["scavenging_complete"]:
@@ -224,6 +251,7 @@ class VideoNutOrchestrator:
             ("Investigation", self.run_investigation),
             ("Scriptwriting", self.run_scriptwriting), 
             ("Direction", self.run_direction),
+            ("Visioning", self.run_visionary),
             ("Scavenging", self.run_scavenging),
             ("Archiving", self.run_archiving)
         ]
@@ -266,6 +294,7 @@ def main():
             ("Investigation", "investigation_complete", "truth_dossier.md"),
             ("Scriptwriting", "scriptwriting_complete", "narrative_script.md"),
             ("Direction", "direction_complete", "master_script.md"),
+            ("Visioning (AI Prompts)", "visionary_complete", "visual_prompts.md"),
             ("Scavenging", "scavenging_complete", "asset_manifest.md"),
             ("Archiving", "archiving_complete", "assets/"),
         ]
@@ -288,7 +317,8 @@ def main():
             "none": ("Investigation", "/investigator", "Create truth_dossier.md with research findings"),
             "investigation": ("Scriptwriting", "/scriptwriter", "Create narrative_script.md from the dossier"),
             "scriptwriting": ("Direction", "/director", "Create master_script.md with visual directions"),
-            "direction": ("Scavenging", "/scavenger", "Create asset_manifest.md with URLs"),
+            "direction": ("Visioning (AI Prompts)", "/visionary", "Create visual_prompts.md with AI visual prompts"),
+            "visionary": ("Scavenging", "/scavenger", "Create asset_manifest.md with URLs"),
             "scavenging": ("Archiving", "/archivist", "Download all assets to assets/ folder"),
             "archiving": ("Complete", None, "🎉 All done! Your video assets are ready for editing."),
         }
@@ -309,6 +339,7 @@ def main():
             "investigation": [("truth_dossier.md", "Run /investigator to create this file")],
             "scriptwriting": [("narrative_script.md", "Run /scriptwriter to create this file")],
             "direction": [("master_script.md", "Run /director to create this file")],
+            "visionary": [("visual_prompts.md", "Run /visionary to create this file")],
             "scavenging": [("asset_manifest.md", "Run /scavenger to create this file")],
         }
         
