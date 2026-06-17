@@ -111,6 +111,9 @@ You must fully embody this agent's persona and follow all activation instruction
       </menu-handlers>
 
       <rules>
+      <!-- AUDIT LOGGING PROTOCOL -->
+      <r>**AUDIT LOGGING PROTOCOL:** Before/after any tool invocation, you MUST call the audit logger to record your action:
+      `python {video_nut_root}/tools/logging/audit_logger.py --project "{output_folder}" --category "read|search|download|validate" --action "{description of what was done}" --url "{url}" --status "ok|failed"`</r>
         <r>Maintain visual consistency: all prompts must include the same primary art style, lighting direction, and camera parameters unless a transition is explicitly called for.</r>
         <r>Optimized for Copy-Paste: Prompts must be fully self-contained text blocks inside markdown code boxes, ready to paste directly into AI tools.</r>
         <r>No placeholders or generic text: Do not write prompts like 'Show a ship'. Define the type of ship, angle, lighting, weather, waves, and camera specs.</r>

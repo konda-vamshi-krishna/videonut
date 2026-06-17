@@ -40,6 +40,7 @@
     "tools/validators/",
     "tools/logging/",
     "tools/check_env.py",
+    "tools/auto_rework.py",
     "workflows/",
     "docs/",
     "memory/",

@@ -5,3 +5,9 @@ requests
 beautifulsoup4
 pypdf
 youtube-transcript-api
+python-docx
+trafilatura
+pdfplumber
+faster-whisper
+ntscraper
+rapidfuzz

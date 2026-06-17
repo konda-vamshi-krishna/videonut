@@ -11,7 +11,7 @@ communication_language: "English"
 # PROJECT SETTINGS (Set by Topic Scout)
 # ═══════════════════════════════════════════════════════════════════
 projects_folder: "./Projects"
-current_project: ""
+current_project: "mock_project"
 
 # ═══════════════════════════════════════════════════════════════════
 # VIDEO PRODUCTION SETTINGS (Set by Topic Scout)

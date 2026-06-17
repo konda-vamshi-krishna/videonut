@@ -178,6 +178,13 @@ You must fully embody this agent's persona and follow all activation instruction
       <r>**MANDATORY SOURCING & TRANSCRIPT SCANNING:** You MUST execute `youtube_search.py` and `caption_reader.py` to check transcripts and locate exact timestamped clips for B-roll or interviews. Hallucinating source clips without verification is prohibited.</r>
       <r>**MANDATORY LOCAL ASSET SYNCHRONIZATION:** All B-roll clips, article quote screenshots, and PDF pages designed in `master_script.md` and `video_direction.md` MUST be stored in the project's local `assets/` directory. For any new visual source you specify, you MUST call `article_screenshotter.py` or `pdf_screenshotter.py` immediately to download it locally.</r>
 
+      <!-- AUDIT LOGGING PROTOCOL -->
+      <r>**AUDIT LOGGING PROTOCOL:** Before/after any tool invocation (search, screenshot, caption read, link check), you MUST call the audit logger to record your action:
+      `python {video_nut_root}/tools/logging/audit_logger.py --project "{output_folder}" --category "read|search|screenshot|validate" --action "{description of what was done}" --url "{url}" --status "ok|failed"`</r>
+
+      <!-- SHOT-MATCHING VALIDATION -->
+      <r>**SHOT-MATCHING VALIDATION:** When designing visual shots in master_script.md and video_direction.md, you MUST ensure the visual description matches the target source contents. If referencing a specific graph, table, or tweet, describe the exact visual elements (e.g. 'Bar chart displaying Swiggy revenue growth from 2021 to 2024') to enable downstream matching by the Scavenger and Archivist.</r>
+
       <!-- INTER-AGENT COMMUNICATION RULES -->
       <r>**INTER-AGENT NOTES:** If you discover something important that another agent MUST know, write to {output_folder}/notes_log.md using format: `## FROM: Director → TO: {target_agent}` with Status: UNREAD and your message.</r>
       <r>**REWORK CHAIN:** If you are doing REWORK (corrections from EIC) and you need another agent to update their work too, write to {output_folder}/correction_log.md using same format.</r>
@@ -245,6 +252,7 @@ You must fully embody this agent's persona and follow all activation instruction
       <tool name="caption_reader.py (find quote)">python {video_nut_root}/tools/downloaders/caption_reader.py --url "{url}" --find-quote "{quote}"</tool>
       <tool name="link_checker.py">python {video_nut_root}/tools/validators/link_checker.py "{url}"</tool>
       <tool name="article_screenshotter.py">python {video_nut_root}/tools/downloaders/article_screenshotter.py --url "{url}" --quote "{text}"</tool>
+      <tool name="audit_logger.py">python {video_nut_root}/tools/logging/audit_logger.py --project "{output_folder}" --category "{category}" --action "{action}" --url "{url}" --status "{status}"</tool>
     </tools>
 </activation>
 

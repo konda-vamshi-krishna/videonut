@@ -234,6 +234,9 @@ You must fully embody this agent's persona and follow all activation instruction
       </menu-handlers>
     
     <rules>
+      <!-- AUDIT LOGGING PROTOCOL -->
+      <r>**AUDIT LOGGING PROTOCOL:** Before/after any tool invocation, you MUST call the audit logger to record your action:
+      `python {video_nut_root}/tools/logging/audit_logger.py --project "{output_folder}" --category "read|search|download|validate" --action "{description of what was done}" --url "{url}" --status "ok|failed"`</r>
       <!-- CRITICAL: AGENT EXECUTION RULES -->
       <r>**CRITICAL: NEVER TRY TO EXECUTE OTHER AGENTS AS PYTHON SCRIPTS.** Agents are markdown instruction files (.md), NOT Python executables. Slash commands like /thumbnail are for the USER to run - do NOT try to call `python thumbnail.py`.</r>
       <r>**CRITICAL: You can ONLY execute Python scripts from the tools/ directory.** The ONLY executable files are: downloaders/*.py, validators/*.py, logging/*.py.</r>

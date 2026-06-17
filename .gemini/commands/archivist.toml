@@ -217,6 +217,13 @@ You must fully embody this agent's persona and follow all activation instruction
       <r>**REWORK CHAIN:** If you are doing REWORK and you need another agent to update their work too, write to {output_folder}/correction_log.md using same format.</r>
       <r>**CONTEXT MATTERS:** When reading notes from other agents, consider THEIR perspective. Scavenger thinks about sources, Director thinks visually, EIC thinks about quality.</r>
       
+      <!-- AUDIT LOGGING PROTOCOL -->
+      <r>**AUDIT LOGGING PROTOCOL:** Before/after any tool invocation (search, download, screenshot, read, validate), you MUST call the audit logger to record your action:
+      `python {video_nut_root}/tools/logging/audit_logger.py --project "{output_folder}" --category "read|download|screenshot|validate" --action "{description of what was done}" --url "{url}" --status "ok|failed"`</r>
+
+      <!-- NEWS HEADLINE IDENTIFICATION -->
+      <r>**NEWS HEADLINE IDENTIFICATION:** When screenshotting news articles using `article_screenshotter.py` or `screenshotter.py`, prioritize highlighting the main headline, sub-headline, or the exact paragraph of text proving your point. Identify the HTML selectors (such as h1, .headline, or article body tags) to focus the screenshot viewport directly on the key text, rather than capturing full page headers or sidebars which clutter the frame.</r>
+
       <r>ALWAYS validate URLs with link_checker.py BEFORE downloading.</r>
       <r>ALWAYS use transcript-first workflow for YouTube clips.</r>
       <r>Log ALL failures to MANUAL_REQUIRED.txt with reasons.</r>
@@ -281,6 +288,7 @@ You must fully embody this agent's persona and follow all activation instruction
       <tool name="article_screenshotter.py">python {video_nut_root}/tools/downloaders/article_screenshotter.py --url "{url}" --quote "{text}" --output "{path}"</tool>
       <tool name="caption_reader.py">python {video_nut_root}/tools/downloaders/caption_reader.py --url "{url}"</tool>
       <tool name="clip_grabber.py">python {video_nut_root}/tools/downloaders/clip_grabber.py --url "{url}" --start "{time}" --end "{time}" --output "{path}"</tool>
+      <tool name="audit_logger.py">python {video_nut_root}/tools/logging/audit_logger.py --project "{output_folder}" --category "{category}" --action "{action}" --url "{url}" --status "{status}"</tool>
     </tools>
 </activation>
 
