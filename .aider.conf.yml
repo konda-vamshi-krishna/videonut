@@ -1,0 +1,5 @@
+# Aider Configuration File
+# For more info: https://aider.chat/docs/config.html
+
+# Load project-specific coding conventions
+conventions: CONVENTIONS.md

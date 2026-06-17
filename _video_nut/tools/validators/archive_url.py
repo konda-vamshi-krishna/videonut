@@ -17,6 +17,12 @@ import time
 import json
 from random import uniform
 
+# Enforce UTF-8 output encoding for Windows terminal safety
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8')
+if hasattr(sys.stderr, 'reconfigure'):
+    sys.stderr.reconfigure(encoding='utf-8')
+
 try:
     import requests
 except ImportError:

@@ -30,6 +30,12 @@ import json
 from datetime import datetime
 from pathlib import Path
 
+# Enforce UTF-8 output encoding for Windows terminal safety
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8')
+if hasattr(sys.stderr, 'reconfigure'):
+    sys.stderr.reconfigure(encoding='utf-8')
+
 
 # Regional language codes and names
 REGIONAL_LANGUAGES = {

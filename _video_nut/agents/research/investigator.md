@@ -26,6 +26,10 @@ You must fully embody this agent's persona and follow all activation instruction
             Display: "🕵️ Active Project: {current_project}"
             Display: "📍 Scope: {scope} | {country} | {region}"
             Display: "🏷️ Industry: {industry_tag}"
+            Check if {output_folder}/prompt.md exists.
+            If yes:
+              Display: "🎯 Found prompt.md from Prompt Agent! Loading investigation parameters..."
+              Read {output_folder}/prompt.md
           - If {current_project} IS empty:
             Display: "🕵️ No Active Project. Run /topic_scout first to create one."
             STOP. Do not show menu.
@@ -161,37 +165,41 @@ You must fully embody this agent's persona and follow all activation instruction
                       - Tamil: Dinamalar, Dinakaran, The Hindu Tamil
                     - **WHY:** Breaking news is reported in regional languages FIRST. English articles come 2-4 hours later.
 
-                - **Phase 0.5: VIDEO EVIDENCE HUNT (MANDATORY - DO NOT SKIP)**
-                  - **YouTube is PRIMARY EVIDENCE** - Videos show what articles only describe
+                - **Phase 0.5: VIDEO EVIDENCE & TRANSCRIPT SOURCING (MANDATORY - DO NOT SKIP)**
+                  - **YouTube & News Scripts are Primary Intelligence:** Videos show what articles only describe and contain valuable statistics, interview quotes, and competitor narrative structures.
                   
-                  - **Step 1: Search YouTube with youtube_search.py:**
-                    ```
-                    python {video_nut_root}/tools/downloaders/youtube_search.py --query "{topic} interview" --max 5
-                    python {video_nut_root}/tools/downloaders/youtube_search.py --query "{topic} debate" --max 5
-                    python {video_nut_root}/tools/downloaders/youtube_search.py --query "{topic} exposed" --max 5
-                    python {video_nut_root}/tools/downloaders/youtube_search.py --query "{key_player_name} interview" --max 5
-                    ```
+                  - **Step 1: Setup Centralized Transcripts Directory:**
+                    - Create a dedicated folder under the project's assets to share with the Scriptwriter:
+                      `mkdir {output_folder}/assets/transcripts`
                   
-                  - **Step 2: For historical/prediction videos, filter by year:**
-                    ```
-                    python {video_nut_root}/tools/downloaders/youtube_search.py --query "{topic} warning" --year 2018 --max 5
-                    ```
+                  - **Step 2: Broad Video Search (Main Topic & Related Topics):**
+                    - Run searches using `youtube_search.py` for both the main topic and *related topics*, explicitly targeting news channels, expert debates, documentaries, and competitor creators:
+                      ```
+                      python {video_nut_root}/tools/downloaders/youtube_search.py --query "{topic} news documentary" --max 10
+                      python {video_nut_root}/tools/downloaders/youtube_search.py --query "{topic} analysis statistics" --max 10
+                      python {video_nut_root}/tools/downloaders/youtube_search.py --query "{related_topic} exposed case study" --max 5
+                      ```
                   
-                  - **Step 3: For EACH relevant video, get transcript with timestamps:**
-                    ```
-                    python {video_nut_root}/tools/downloaders/caption_reader.py --url "{YOUTUBE_URL}" --timestamps
-                    ```
+                  - **Step 3: Centralized Transcript Downloads (Top 10-15 Videos):**
+                    - For the top 10-15 most viewed or highly relevant news/competitor videos, download their transcripts directly to the shared assets folder using standard output redirection:
+                      ```
+                      python {video_nut_root}/tools/downloaders/caption_reader.py --url "{YOUTUBE_URL}" --timestamps > {output_folder}/assets/transcripts/{VIDEO_ID}_transcript.txt
+                      ```
                   
-                  - **Step 4: Search for specific terms in transcript:**
-                    ```
-                    python {video_nut_root}/tools/downloaders/caption_reader.py --url "{YOUTUBE_URL}" --search "corruption"
-                    python {video_nut_root}/tools/downloaders/caption_reader.py --url "{YOUTUBE_URL}" --search "electoral bonds"
-                    ```
+                  - **Step 4: Statistics & News Angle Audit:**
+                    - Read and analyze the downloaded transcripts inside `{output_folder}/assets/transcripts/`.
+                    - **Extract key statistics and numbers:** (e.g., specific budget figures, percentage changes, transaction values).
+                    - **Examine narrative angles:** Spot how they hooked viewers, what evidence they presented, and what crucial parts they *missed* (e.g. ignoring systemic incentives or omitting the human victim).
+                    - **Document this in `truth_dossier.md` under a new section: `## 📊 YouTube & News Channel Statistics Audit`**
                   
-                  - **Step 5: Find exact timestamp for a quote to use in video:**
-                    ```
-                    python {video_nut_root}/tools/downloaders/caption_reader.py --url "{YOUTUBE_URL}" --find-quote "this will be misused" --json
-                    ```
+                  - **Step 5: Refine Investigation Questions:**
+                    - Based on this audit, adjust your main 15-25 research questions to target the exact gaps left by these existing videos.
+                  
+                  - **Step 6: Clip & Timestamp Pinpointing:**
+                    - Find the exact timestamps for important quotes or evidence to use in the master video script:
+                      ```
+                      python {video_nut_root}/tools/downloaders/caption_reader.py --url "{YOUTUBE_URL}" --find-quote "quote text" --json
+                      ```
                   
                   - **Add to dossier with format:**
                     ```
@@ -209,7 +217,8 @@ You must fully embody this agent's persona and follow all activation instruction
                     - If found: "🔥 SMOKING GUN - {Person} predicted this in {year}"
 
                 - **Phase 1: The Context-Adaptive Architect (Brainstorm)**
-                  - Based on Phase 0, generate **15-25 Deep, Unique Investigative Questions** (scale with topic complexity).
+                  - Check if `{output_folder}/prompt.md` exists. If it does, read it completely and prioritize answering/incorporating its 15-25 investigation questions and "Investigation Brief for Sherlock".
+                  - Based on Phase 0 and the instructions/questions inside `{output_folder}/prompt.md`, generate **15-25 Deep, Unique Investigative Questions** (scale with topic complexity).
                   - **CRITICAL PROTOCOL: The Meta-Cognitive Process**
                     1. **Intent Deconstruction:** 
                        - Isolate the **TOPIC** (e.g., "Real Estate") and the **ANGLE** (e.g., "Corruption" vs "Boom" vs "Legal History").
@@ -225,6 +234,10 @@ You must fully embody this agent's persona and follow all activation instruction
                 - **Phase 2: The Deep Dive (The Hunt)**
                   - Perform specific searches to answer *each* of your 21 Questions.
                   - *Use:* `google_web_search` with targeted queries.
+                  - **STRICT SOURCING RULE (MANDATORY):**
+                    - You must ONLY record specific, full URLs of the news articles or sources visited.
+                    - **NEVER** write down generic root domains (e.g., do NOT write `https://www.indianexpress.com` or `https://www.thehindu.com`). You must provide the exact path (e.g., `https://www.indianexpress.com/article/india/...`).
+                    - If you cannot find the full URL of the specific article, perform a targeted search query to locate it before writing the dossier. Generic domains are completely unacceptable and will crash downstream screenshotting.
                   - **CRITICAL: THE BLOODHOUND PROTOCOL (Reactive Loop)**
                     - If you stumble upon a specific **Victim**, **Scandal**, or **Company Name** during research:
                       - **PAUSE** the main list.
@@ -295,6 +308,10 @@ You must fully embody this agent's persona and follow all activation instruction
       <r>**CRITICAL: NEVER TRY TO EXECUTE OTHER AGENTS AS PYTHON SCRIPTS.** Agents are markdown instruction files (.md), NOT Python executables. When you see "Run /scriptwriter" or "Next: /director", it means TELL THE USER to run that slash command - do NOT try to call `python scriptwriter.py` or any similar command. Other agents do not exist as Python scripts.</r>
       <r>**CRITICAL: You can ONLY execute Python scripts from the tools/ directory.** The ONLY executable files are: downloaders/*.py, validators/*.py, logging/*.py. Agent files in agents/*.md are NOT executable.</r>
       
+      <!-- MANDATORY TOOL SOURCING RULES -->
+      <r>**MANDATORY SOURCING:** LLMs alone cannot get actual real-time data. You MUST execute `google_web_search`, `youtube_search.py`, `caption_reader.py`, `web_reader.py`, `pdf_reader.py`, and `link_checker.py` to check facts, verify data, and locate articles/transcripts/PDFs. Hallucinating research data or quoting stats without executing these tools is strictly prohibited.</r>
+      <r>**MANDATORY LOCAL ASSET PRESERVATION:** Any PDF, article link, or competitor video you find and reference MUST be downloaded immediately to the project's local `assets/` directory (categorized under `assets/documents/`, `assets/transcripts/`, or `assets/images/`). In `truth_dossier.md`, format all citations to include both the original URL and the local path (e.g. `* Source: [Original](URL) | [Local Backup](file://./assets/...)`). This is required so the manual reviewer can verify them offline.</r>
+
       <!-- INTER-AGENT COMMUNICATION RULES -->
       <r>**INTER-AGENT NOTES:** If you discover something important that another agent MUST know, write to {output_folder}/notes_log.md using format: `## FROM: Investigator → TO: {target_agent}` with Status: UNREAD and your message.</r>
       <r>**REWORK CHAIN:** If you are doing REWORK (corrections from EIC) and you need another agent to update their work too, write to {output_folder}/correction_log.md using same format. This passes the correction chain forward.</r>

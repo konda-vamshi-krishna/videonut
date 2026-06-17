@@ -277,7 +277,7 @@ async function main() {
     // Verify CLI actually works (not just exists in PATH)
     function isCliWorking(cmd) {
         try {
-            execSync(`${cmd} --version`, { stdio: 'pipe', timeout: 10000 });
+            execSync(`${cmd} --version`, { stdio: 'pipe', timeout: 5000 });
             return true;
         } catch {
             return false;
@@ -287,75 +287,399 @@ async function main() {
     const hasGemini = isCliWorking('gemini');
     const hasQwen = isCliWorking('qwen');
     const hasClaude = isCliWorking('claude');
+    const hasOpenCode = isCliWorking('opencode');
+    const hasAider = isCliWorking('aider');
+
+    let selectedCli = null;
 
     // Show what's detected
     console.log('Checking installed CLIs...');
-    if (hasGemini) { success('  Gemini CLI - Installed'); }
-    if (hasQwen) { success('  Qwen CLI - Installed'); }
-    if (hasClaude) { success('  Claude CLI - Installed'); }
-    if (!hasGemini && !hasQwen && !hasClaude) {
-        info('  No AI CLI currently installed');
-    }
+    if (hasGemini) { success('  Gemini CLI - Installed'); } else { info('  Gemini CLI - Not found'); }
+    if (hasQwen) { success('  Qwen CLI - Installed'); } else { info('  Qwen CLI - Not found'); }
+    if (hasClaude) { success('  Claude CLI - Installed'); } else { info('  Claude CLI - Not found'); }
+    if (hasOpenCode) { success('  OpenCode CLI - Installed'); } else { info('  OpenCode CLI - Not found'); }
+    if (hasAider) { success('  Aider CLI - Installed'); } else { info('  Aider CLI - Not found'); }
 
     // Always offer installation choice
-    console.log('\n📦 CLI Installation:');
-    console.log('  1. Install BOTH Gemini + Qwen (⭐ RECOMMENDED)');
-    console.log('     → Gemini: Best for content writing & creativity');
-    console.log('     → Qwen: Best for instruction following & agent tasks');
-    console.log('  2. Install Gemini CLI only (by Google)');
-    console.log('  3. Install Qwen CLI only (by Alibaba)');
-    if (hasGemini || hasQwen || hasClaude) {
-        console.log('  4. Skip - Use existing CLI\n');
-    } else {
-        console.log('  4. Skip - I will install manually\n');
+    console.log('\n📦 Choose AI CLI Tools to install/update:');
+    console.log('  1. Claude Code (npm install -g @anthropic-ai/claude-code)');
+    console.log('  2. OpenCode CLI (npm install -g opencode-ai)');
+    console.log('  3. Gemini CLI (npm install -g @google/gemini-cli)');
+    console.log('  4. Qwen CLI (npm install -g @qwen-code/qwen-code)');
+    console.log('  5. Aider CLI (pip install aider-chat)');
+    console.log('  6. Install ALL tools');
+    console.log('  7. Skip / Skip installation');
+
+    const choicesInput = await ask('\nEnter choice(s) comma-separated (e.g. 1,2,5 or 6 for ALL or press Enter to skip): ');
+    
+    let installAll = false;
+    let selectedIndices = [];
+
+    if (choicesInput.trim() === '6') {
+        installAll = true;
+    } else if (choicesInput.trim() && choicesInput.trim() !== '7') {
+        selectedIndices = choicesInput.split(',').map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n) && n >= 1 && n <= 5);
     }
 
-    const answer = await ask('Enter choice [1 for BOTH]: ');
+    if (installAll || selectedIndices.includes(1)) {
+        try {
+            info('Installing Claude Code globally...');
+            execSync('npm install -g @anthropic-ai/claude-code', { stdio: 'inherit' });
+            success('Claude Code installed successfully!');
+            if (!selectedCli) selectedCli = 'claude';
+        } catch (e) {
+            error('Failed to install Claude Code.');
+        }
+    }
 
-    if (answer === '2') {
-        // Install Gemini CLI only
+    if (installAll || selectedIndices.includes(2)) {
+        try {
+            info('Installing OpenCode CLI globally...');
+            execSync('npm install -g opencode-ai', { stdio: 'inherit' });
+            success('OpenCode CLI installed successfully!');
+            if (!selectedCli) selectedCli = 'opencode';
+        } catch (e) {
+            error('Failed to install OpenCode CLI.');
+        }
+    }
+
+    if (installAll || selectedIndices.includes(3)) {
         try {
             info('Installing Gemini CLI globally...');
             execSync('npm install -g @google/gemini-cli', { stdio: 'inherit' });
-            success('Gemini CLI installed! (Best for content writing)');
+            success('Gemini CLI installed successfully!');
+            if (!selectedCli) selectedCli = 'gemini';
         } catch (e) {
-            warning('Could not install Gemini CLI.');
-            info('Install manually: npm install -g @google/gemini-cli');
+            error('Failed to install Gemini CLI.');
         }
-    } else if (answer === '3') {
-        // Install Qwen CLI only
-        try {
-            info('Installing Qwen CLI globally...');
-            execSync('npm install -g @qwen-code/qwen-code', { stdio: 'inherit' });
-            success('Qwen CLI installed! (Best for instruction following)');
-        } catch (e) {
-            warning('Could not install Qwen CLI.');
-            info('Install manually: npm install -g @qwen-code/qwen-code');
-        }
-    } else if (answer !== '4') {
-        // Install BOTH Gemini + Qwen (default)
-        info('Installing BOTH Gemini CLI and Qwen CLI...\n');
-
-        try {
-            info('Installing Gemini CLI globally...');
-            execSync('npm install -g @google/gemini-cli', { stdio: 'inherit' });
-            success('Gemini CLI installed! (Best for content writing)');
-        } catch (e) {
-            warning('Could not install Gemini CLI.');
-        }
-
-        try {
-            info('Installing Qwen CLI globally...');
-            execSync('npm install -g @qwen-code/qwen-code', { stdio: 'inherit' });
-            success('Qwen CLI installed! (Best for instruction following)');
-        } catch (e) {
-            warning('Could not install Qwen CLI.');
-        }
-
-        console.log('\n✅ Both CLIs installed!');
-        console.log('   Use "gemini" for creative content');
-        console.log('   Use "qwen" for agent/instruction tasks');
     }
+
+    if (installAll || selectedIndices.includes(4)) {
+        try {
+            info('Installing Qwen CLI globally...');
+            execSync('npm install -g @qwen-code/qwen-code', { stdio: 'inherit' });
+            success('Qwen CLI installed successfully!');
+            if (!selectedCli) selectedCli = 'qwen';
+        } catch (e) {
+            error('Failed to install Qwen CLI.');
+        }
+    }
+
+    if (installAll || selectedIndices.includes(5)) {
+        if (pythonCmd) {
+            try {
+                info('Installing Aider CLI via pip...');
+                execSync(`"${pythonCmd}" -m pip install aider-chat`, { stdio: 'inherit' });
+                success('Aider CLI installed successfully!');
+                if (!selectedCli) selectedCli = 'aider';
+            } catch (e) {
+                error('Failed to install Aider CLI.');
+            }
+        } else {
+            warning('Aider CLI installation skipped (Python not available).');
+        }
+    }
+
+    // Determine fallback selectedCli if none was newly installed
+    if (!selectedCli) {
+        if (isCliWorking('gemini')) selectedCli = 'gemini';
+        else if (isCliWorking('claude')) selectedCli = 'claude';
+        else if (isCliWorking('opencode')) selectedCli = 'opencode';
+        else if (isCliWorking('qwen')) selectedCli = 'qwen';
+        else if (isCliWorking('aider')) selectedCli = 'aider';
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // STEP 5: Create Launcher Script
+    // ═══════════════════════════════════════════════════════════════
+    header('Creating Launcher Script');
+
+    const targetDir = fs.existsSync(path.join(projectDir, '..', '_video_nut')) ? path.join(projectDir, '..') : projectDir;
+    const videoNutDir = fs.existsSync(path.join(projectDir, '..', '_video_nut')) ? path.join(projectDir, '..', '_video_nut') : projectDir;
+    const localPythonPath = path.join(videoNutDir, 'python');
+    const localToolsPath = path.join(videoNutDir, 'tools', 'bin');
+
+    const launchScriptContent = isWindows
+        ? `@echo off
+REM Add local Python, FFmpeg, and AppData NPM prefix to PATH for this session
+set PATH=${localPythonPath};${localPythonPath}\\Scripts;${localToolsPath};%APPDATA%\\npm;%PATH%
+
+:menu
+cls
+echo ====================================================
+echo                 🎬 VideoNut Launcher 🎬
+echo ====================================================
+echo  Python Path: ${localPythonPath}
+echo  FFmpeg Path: ${localToolsPath}
+echo ====================================================
+echo.
+echo  Choose an AI CLI tool or utility to run:
+echo.
+echo   [1] Google Gemini CLI
+echo   [2] Anthropic Claude Code
+echo   [3] OpenCode CLI
+echo   [4] Alibaba Qwen CLI
+echo   [5] Aider CLI
+echo   [6] Run Environment Check
+echo   [7] Run Package Setup / CLI Installer
+echo   [8] Exit
+echo.
+echo ====================================================
+set /p choice="Enter option (1-8): "
+
+if "%choice%"=="1" goto launch_gemini
+if "%choice%"=="2" goto launch_claude
+if "%choice%"=="3" goto launch_opencode
+if "%choice%"=="4" goto launch_qwen
+if "%choice%"=="5" goto launch_aider
+if "%choice%"=="6" goto run_check
+if "%choice%"=="7" goto run_setup
+if "%choice%"=="8" goto end
+goto menu
+
+:launch_gemini
+where gemini >nul 2>nul
+if %errorlevel% neq 0 (
+    echo Gemini CLI is not installed.
+    set /p inst="Would you like to install it now? (Y/N): "
+    if /i "%inst%"=="Y" (
+        echo Installing Gemini CLI globally...
+        npm install -g @google/gemini-cli
+    ) else (
+        pause
+        goto menu
+    )
+)
+echo Starting Gemini CLI...
+gemini
+pause
+goto menu
+
+:launch_claude
+where claude >nul 2>nul
+if %errorlevel% neq 0 (
+    echo Claude Code is not installed.
+    set /p inst="Would you like to install it now? (Y/N): "
+    if /i "%inst%"=="Y" (
+        echo Installing Claude Code globally...
+        npm install -g @anthropic-ai/claude-code
+    ) else (
+        pause
+        goto menu
+    )
+)
+echo Starting Claude Code...
+claude
+pause
+goto menu
+
+:launch_opencode
+where opencode >nul 2>nul
+if %errorlevel% neq 0 (
+    echo OpenCode CLI is not installed.
+    set /p inst="Would you like to install it now? (Y/N): "
+    if /i "%inst%"=="Y" (
+        echo Installing OpenCode CLI globally...
+        npm install -g opencode-ai
+    ) else (
+        pause
+        goto menu
+    )
+)
+echo Starting OpenCode CLI...
+opencode
+pause
+goto menu
+
+:launch_qwen
+where qwen >nul 2>nul
+if %errorlevel% neq 0 (
+    echo Qwen CLI is not installed.
+    set /p inst="Would you like to install it now? (Y/N): "
+    if /i "%inst%"=="Y" (
+        echo Installing Qwen CLI globally...
+        npm install -g @qwen-code/qwen-code
+    ) else (
+        pause
+        goto menu
+    )
+)
+echo Starting Qwen CLI...
+qwen
+pause
+goto menu
+
+:launch_aider
+where aider >nul 2>nul
+if %errorlevel% neq 0 (
+    echo Aider CLI is not installed in the environment.
+    set /p inst="Would you like to install it now? (Y/N): "
+    if /i "%inst%"=="Y" (
+        echo Installing Aider CLI via pip...
+        python -m pip install aider-chat
+    ) else (
+        pause
+        goto menu
+    )
+)
+echo Starting Aider CLI...
+aider
+pause
+goto menu
+
+:run_check
+echo Running Environment Check...
+python "${videoNutDir.replace(/\\/g, '/')}/tools/check_env.py"
+pause
+goto menu
+
+:run_setup
+echo Launching Setup Script...
+node "${videoNutDir.replace(/\\/g, '/')}/setup.js"
+pause
+goto menu
+
+:end
+echo Thank you for using VideoNut!
+exit /b
+`
+        : `#!/bin/bash
+# Add local Python, FFmpeg, and global npm bin path to PATH
+export PATH="${localPythonPath}:${localPythonPath}/bin:${localToolsPath}:$(npm config get prefix 2>/dev/null)/bin:$PATH"
+
+show_menu() {
+    clear
+    echo "===================================================="
+    echo "                 🎬 VideoNut Launcher 🎬"
+    echo "===================================================="
+    echo "  Python Path: ${localPythonPath}"
+    echo "  FFmpeg Path: ${localToolsPath}"
+    echo "===================================================="
+    echo ""
+    echo "  Choose an AI CLI tool or utility to run:"
+    echo ""
+    echo "   [1] Google Gemini CLI"
+    echo "   [2] Anthropic Claude Code"
+    echo "   [3] OpenCode CLI"
+    echo "   [4] Alibaba Qwen CLI"
+    echo "   [5] Aider CLI"
+    echo "   [6] Run Environment Check"
+    echo "   [7] Run Package Setup / CLI Installer"
+    echo "   [8] Exit"
+    echo ""
+    echo "===================================================="
+    read -p "Enter option (1-8): " choice
+
+    case $choice in
+        1)
+            if ! command -v gemini &> /dev/null; then
+                echo "Gemini CLI is not installed."
+                read -p "Would you like to install it now? (y/n): " inst
+                if [[ $inst == "y" || $inst == "Y" ]]; then
+                    npm install -g @google/gemini-cli
+                else
+                    read -p "Press Enter to return..."
+                    show_menu
+                    return
+                fi
+            fi
+            gemini
+            read -p "Press Enter to return..."
+            show_menu
+            ;;
+        2)
+            if ! command -v claude &> /dev/null; then
+                echo "Claude Code is not installed."
+                read -p "Would you like to install it now? (y/n): " inst
+                if [[ $inst == "y" || $inst == "Y" ]]; then
+                    npm install -g @anthropic-ai/claude-code
+                else
+                    read -p "Press Enter to return..."
+                    show_menu
+                    return
+                fi
+            fi
+            claude
+            read -p "Press Enter to return..."
+            show_menu
+            ;;
+        3)
+            if ! command -v opencode &> /dev/null; then
+                echo "OpenCode CLI is not installed."
+                read -p "Would you like to install it now? (y/n): " inst
+                if [[ $inst == "y" || $inst == "Y" ]]; then
+                    npm install -g opencode-ai
+                else
+                    read -p "Press Enter to return..."
+                    show_menu
+                    return
+                fi
+            fi
+            opencode
+            read -p "Press Enter to return..."
+            show_menu
+            ;;
+        4)
+            if ! command -v qwen &> /dev/null; then
+                echo "Qwen CLI is not installed."
+                read -p "Would you like to install it now? (y/n): " inst
+                if [[ $inst == "y" || $inst == "Y" ]]; then
+                    npm install -g @qwen-code/qwen-code
+                else
+                    read -p "Press Enter to return..."
+                    show_menu
+                    return
+                fi
+            fi
+            qwen
+            read -p "Press Enter to return..."
+            show_menu
+            ;;
+        5)
+            if ! command -v aider &> /dev/null; then
+                echo "Aider CLI is not installed."
+                read -p "Would you like to install it now? (y/n): " inst
+                if [[ $inst == "y" || $inst == "Y" ]]; then
+                    python3 -m pip install aider-chat
+                else
+                    read -p "Press Enter to return..."
+                    show_menu
+                    return
+                fi
+            fi
+            aider
+            read -p "Press Enter to return..."
+            show_menu
+            ;;
+        6)
+            python3 "${videoNutDir}/tools/check_env.py"
+            read -p "Press Enter to return..."
+            show_menu
+            ;;
+        7)
+            node "${videoNutDir}/setup.js"
+            read -p "Press Enter to return..."
+            show_menu
+            ;;
+        8)
+            echo "Thank you for using VideoNut!"
+            exit 0
+            ;;
+        *)
+            show_menu
+            ;;
+    esac
+}
+
+show_menu
+`;
+
+    const launchScriptPath = path.join(targetDir, isWindows ? 'start_videonut.bat' : 'start_videonut.sh');
+    fs.writeFileSync(launchScriptPath, launchScriptContent);
+    if (!isWindows) {
+        execSync(`chmod +x "${launchScriptPath}"`);
+    }
+    success(`Created launch script: ${path.basename(launchScriptPath)}`);
 
     // ═══════════════════════════════════════════════════════════════
     // DONE!
@@ -363,16 +687,19 @@ async function main() {
     header('🎉 Setup Complete!');
 
     console.log('📁 Your project is ready:');
-    console.log(`   ${projectDir}/`);
+    console.log(`   ${targetDir}/`);
     console.log('   ├── agents/         (AI agent prompts)');
     console.log('   ├── tools/          (downloaders, validators)');
     console.log('   ├── .gemini/        (CLI commands)');
     console.log('   └── Projects/       (create this for your work)');
 
     console.log('\n🚀 Quick Start:');
-    console.log('   1. Run: gemini (or your preferred CLI)');
-    console.log('   2. Type: /topic_scout');
-    console.log('   3. Follow the agent pipeline!');
+    if (selectedCli) {
+        console.log(`   1. Run: ${isWindows ? 'start_videonut.bat' : './start_videonut.sh'}`);
+        console.log('   2. Choose your preferred CLI and start using the agents!');
+    } else {
+        console.log('   1. Run the launcher script to configure and launch.');
+    }
 
     console.log('\n' + '═'.repeat(60));
     log('🎬 Happy Documentary Making!', 'bright');

@@ -11,7 +11,7 @@
 [![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
 [![Node](https://img.shields.io/badge/Node.js-16+-339933?style=flat-square&logo=node.js&logoColor=white)](https://nodejs.org)
 
-**10 Specialized AI Agents** | **Multi-CLI Support** | **Zero Manual Research** | **Production-Ready Assets**
+**11 Specialized AI Agents** | **Multi-CLI Support** | **Zero Manual Research** | **Production-Ready Assets**
 
 [📦 Install](#-quick-install) • [🎯 Quick Start](#-quick-start) • [🤖 Agents](#-meet-the-agents) • [📖 Docs](#-documentation) • [🤝 Contribute](#-contributing)
 
@@ -31,12 +31,12 @@ npx videonut init
 
 ## 🎯 What is VideoNut?
 
-VideoNut transforms your ideas into **production-ready YouTube documentaries** using 10 specialized AI agents:
+VideoNut transforms your ideas into **production-ready YouTube documentaries** using 11 specialized AI agents:
 
 ```
 📡 Topic Scout → 🎯 Prompt → 🕵️ Investigator → ✍️ Scriptwriter → 🎬 Director
         ↓
-    🦅 Scavenger → 💾 Archivist → 🧐 EIC → 🎨 Thumbnail → 🔍 SEO
+    🎨 Visionary → 🦅 Scavenger → 💾 Archivist → 🧐 EIC → 🎨 Thumbnail → 🔍 SEO
 ```
 
 ### What You Get:
@@ -135,11 +135,12 @@ gemini
 | 3 | 🕵️ **Investigator** | `/investigator` | Deep research with sources |
 | 4 | ✍️ **Scriptwriter** | `/scriptwriter` | Write narration script |
 | 5 | 🎬 **Director** | `/director` | Create visual directions |
-| 6 | 🦅 **Scavenger** | `/scavenger` | Find and verify assets |
-| 7 | 💾 **Archivist** | `/archivist` | Download all assets |
-| 8 | 🧐 **EIC** | `/eic` | Final quality review |
-| 9 | 🎨 **Thumbnail** | `/thumbnail` | Generate thumbnail prompts |
-| 10 | 🔍 **SEO** | `/seo` | YouTube optimization |
+| 6 | 🎨 **Visionary** | `/visionary` | Generate AI image and video prompts |
+| 7 | 🦅 **Scavenger** | `/scavenger` | Find and verify assets |
+| 8 | 💾 **Archivist** | `/archivist` | Download all assets |
+| 9 | 🧐 **EIC** | `/eic` | Final quality review |
+| 10 | 🎨 **Thumbnail** | `/thumbnail` | Generate thumbnail prompts |
+| 11 | 🔍 **SEO** | `/seo` | YouTube optimization |
 
 ---
 
@@ -163,6 +164,7 @@ gemini
 |-------|---------|--------------|
 | **Sorkin** | Scriptwriter | Word-count matched scripts with hooks |
 | **Spielberg** | Director | Visual directions with source links |
+| **Visionary** | Visual Prompt Engineer | Detailed prompts for AI image/video scenes |
 | **Canvas** | Thumbnail Designer | Click-worthy thumbnail AI prompts |
 | **Ranker** | SEO Expert | YouTube-optimized metadata |
 
@@ -189,6 +191,7 @@ my-documentary/
 ├── 📝 truth_dossier.md      # Research with sources
 ├── ✍️ voice_script.md       # Narration script
 ├── 🎬 master_script.md      # Script + Visuals
+├── 🎨 visual_prompts.md     # Prompts for AI visual generation
 ├── 📦 asset_manifest.md     # All asset URLs
 ├── 📂 assets/               # Downloaded files
 │   ├── 001_clip.mp4

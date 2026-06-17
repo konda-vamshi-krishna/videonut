@@ -10,7 +10,14 @@ import argparse
 import json
 import subprocess
 import re
+import os
 from datetime import datetime
+
+# Enforce UTF-8 output encoding for Windows terminal safety
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8')
+if hasattr(sys.stderr, 'reconfigure'):
+    sys.stderr.reconfigure(encoding='utf-8')
 
 def search_youtube(query, max_results=10, filter_year=None):
     """
@@ -201,6 +208,7 @@ Examples:
   python youtube_search.py --query "electoral bonds" --max 5 --year 2018
   python youtube_search.py --query "Raghuram Rajan interview" --json
   python youtube_search.py --video-url "https://youtube.com/watch?v=xxx" --details
+  python youtube_search.py --query "electoral bonds" --download-transcripts-dir "./Projects/my_project/assets/transcripts"
         """
     )
     
@@ -210,6 +218,7 @@ Examples:
     parser.add_argument("--json", "-j", action="store_true", help="Output results as JSON")
     parser.add_argument("--video-url", help="Get details for a specific video URL")
     parser.add_argument("--details", "-d", action="store_true", help="Get detailed info for video URL")
+    parser.add_argument("--download-transcripts-dir", help="Directory path to save transcripts of search results")
     
     args = parser.parse_args()
     
@@ -236,6 +245,38 @@ Examples:
         
         output_format = 'json' if args.json else 'text'
         print(format_results(videos, output_format))
+        
+        # Download transcripts if directory is specified
+        if args.download_transcripts_dir:
+            os.makedirs(args.download_transcripts_dir, exist_ok=True)
+            print(f"\n📥 Automatically downloading transcripts for top {len(videos)} videos to {args.download_transcripts_dir}...")
+            tools_dir = os.path.dirname(os.path.abspath(__file__))
+            caption_reader_path = os.path.join(tools_dir, "caption_reader.py")
+            
+            for video in videos:
+                video_url = video['url']
+                video_id = video['video_id']
+                if not video_id:
+                    continue
+                output_file = os.path.join(args.download_transcripts_dir, f"{video_id}_transcript.txt")
+                print(f"   Downloading transcript for: {video['title']} ({video_url})")
+                
+                cmd = [
+                    sys.executable,
+                    caption_reader_path,
+                    "--url", video_url,
+                    "--timestamps"
+                ]
+                try:
+                    res = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+                    if res.returncode == 0:
+                        with open(output_file, "w", encoding="utf-8") as f:
+                            f.write(res.stdout)
+                        print(f"   ✅ Saved transcript: {output_file}")
+                    else:
+                        print(f"   ❌ Failed to get transcript for {video_id}: {res.stderr.strip() if res.stderr else 'Unknown error'}")
+                except Exception as e:
+                    print(f"   ❌ Error downloading transcript for {video_id}: {e}")
     else:
         parser.print_help()
         sys.exit(1)

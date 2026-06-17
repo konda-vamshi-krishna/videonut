@@ -1,0 +1,23 @@
+# Python Virtualenv
+_video_nut/python/
+
+# Downloaded tools binaries
+_video_nut/tools/git/
+_video_nut/tools/bin/
+
+# Downloaded project assets & checkpoints
+Projects/*/assets/
+Projects/*/raw_assets/
+Projects/*/.workflow_checkpoint.json
+Projects/*/.workflow_checkpoint.json.tmp
+
+# Temporary files & logs
+*.log
+redflags/
+gh_temp/
+mingit.zip
+gh.zip
+
+# IDE/Tool configs
+.aider.chat.history.md
+.aider.input.history

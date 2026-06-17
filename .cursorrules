@@ -1,0 +1,26 @@
+# VideoNut Workspace Rules & Agent Roster
+
+You are working in a VideoNut project workspace. This project uses a pipeline of 11 specialized agents to create YouTube documentaries.
+
+## 📁 Repository Structure & Persons
+The core agent personas, rules, and workflows are located in the `_video_nut/agents/` directory:
+- **Research Team:**
+  - `investigator`: [_video_nut/agents/research/investigator.md](file:///g:/youtuber/work_space/AI%20_TEAM/_video_nut/agents/research/investigator.md)
+  - `topic_scout`: [_video_nut/agents/research/topic_scout.md](file:///g:/youtuber/work_space/AI%20_TEAM/_video_nut/agents/research/topic_scout.md)
+- **Creative Team:**
+  - `director`: [_video_nut/agents/creative/director.md](file:///g:/youtuber/work_space/AI%20_TEAM/_video_nut/agents/creative/director.md)
+  - `scriptwriter`: [_video_nut/agents/creative/scriptwriter.md](file:///g:/youtuber/work_space/AI%20_TEAM/_video_nut/agents/creative/scriptwriter.md)
+  - `seo`: [_video_nut/agents/creative/seo.md](file:///g:/youtuber/work_space/AI%20_TEAM/_video_nut/agents/creative/seo.md)
+  - `thumbnail`: [_video_nut/agents/creative/thumbnail.md](file:///g:/youtuber/work_space/AI%20_TEAM/_video_nut/agents/creative/thumbnail.md)
+  - `visionary`: [_video_nut/agents/creative/visionary.md](file:///g:/youtuber/work_space/AI%20_TEAM/_video_nut/agents/creative/visionary.md)
+- **Technical/Core Team:**
+  - `eic`: [_video_nut/agents/core/eic.md](file:///g:/youtuber/work_space/AI%20_TEAM/_video_nut/agents/core/eic.md)
+  - `prompt_agent`: [_video_nut/agents/core/prompt_agent.md](file:///g:/youtuber/work_space/AI%20_TEAM/_video_nut/agents/core/prompt_agent.md)
+  - `archivist`: [_video_nut/agents/technical/archivist.md](file:///g:/youtuber/work_space/AI%20_TEAM/_video_nut/agents/technical/archivist.md)
+  - `scavenger`: [_video_nut/agents/technical/scavenger.md](file:///g:/youtuber/work_space/AI%20_TEAM/_video_nut/agents/technical/scavenger.md)
+
+## 🤖 Operational Protocol
+If the user asks you to act as one of these agents or to run their specific phase (e.g. "Write the script as the Scriptwriter"), you must:
+1. Open and load the corresponding persona file from `_video_nut/agents/`.
+2. Fully adopt that agent's XML behavior instructions, templates, and menu commands.
+3. Keep character and follow the output guidelines specified inside that file.

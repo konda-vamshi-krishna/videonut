@@ -8,6 +8,12 @@ import sys
 import argparse
 import json
 from youtube_transcript_api import YouTubeTranscriptApi
+
+# Enforce UTF-8 output encoding for Windows terminal safety
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8')
+if hasattr(sys.stderr, 'reconfigure'):
+    sys.stderr.reconfigure(encoding='utf-8')
 from youtube_transcript_api.formatters import TextFormatter, JSONFormatter
 import re
 
@@ -44,6 +50,31 @@ def format_timestamp(seconds):
         return f"{minutes:02d}:{secs:02d}"
 
 
+def _fetch_with_retry(video_id, languages=None):
+    """Fetch transcript data with automatic retry and backoff on connection/SSL errors."""
+    import time
+    from random import uniform
+    
+    max_retries = 3
+    last_error = None
+    
+    for attempt in range(max_retries):
+        try:
+            api = YouTubeTranscriptApi()
+            if languages:
+                return api.fetch(video_id, languages=languages)
+            else:
+                return api.fetch(video_id)
+        except Exception as e:
+            last_error = e
+            if attempt < max_retries - 1:
+                delay = uniform(2, 5)
+                print(f"⚠️ YouTube transcript fetch attempt {attempt+1} failed: {str(e)}. Retrying in {delay:.2f} seconds...", file=sys.stderr)
+                time.sleep(delay)
+                
+    raise last_error
+
+
 def get_youtube_captions(url, languages=None, with_timestamps=False, search_term=None):
     """
     Get YouTube video captions/transcript
@@ -68,11 +99,8 @@ def get_youtube_captions(url, languages=None, with_timestamps=False, search_term
         sys.exit(1)
     
     try:
-        # Instantiate the API class
-        api = YouTubeTranscriptApi()
-        
-        # Fetch the transcript data directly using the instance method
-        transcript_data = api.fetch(video_id, languages=languages)
+        # Fetch the transcript data using the retry mechanism
+        transcript_data = _fetch_with_retry(video_id, languages=languages)
         
         # If searching for a term, filter and return with timestamps
         if search_term:
@@ -115,7 +143,8 @@ def get_youtube_captions(url, languages=None, with_timestamps=False, search_term
         return plain_text
         
     except Exception as e:
-        print(f"Error retrieving captions: {str(e)}", file=sys.stderr)
+        print(f"Error retrieving captions (after retries): {str(e)}", file=sys.stderr)
+        print("💡 Tip: YouTube might be blocking automated scraper requests. Try using a VPN or proxies.", file=sys.stderr)
         sys.exit(1)
 
 
@@ -137,9 +166,8 @@ def find_timestamp_for_quote(url, quote, context_seconds=30):
         return None
     
     try:
-        api = YouTubeTranscriptApi()
-        # Use fetch to get the default transcript or specify languages
-        transcript_data = api.fetch(video_id)
+        # Fetch transcript data using the retry mechanism
+        transcript_data = _fetch_with_retry(video_id)
         
         quote_lower = quote.lower()
         
@@ -169,7 +197,7 @@ def find_timestamp_for_quote(url, quote, context_seconds=30):
         return {'found': False, 'message': f"Quote not found: {quote}"}
         
     except Exception as e:
-        return {'found': False, 'message': str(e)}
+        return {'found': False, 'message': f"Error fetching transcript (after retries): {str(e)}"}
 
 
 def main():
