@@ -35,7 +35,7 @@ except ImportError:
 def download_pdf_to_temp(url, temp_path):
     """Download PDF to a temporary file."""
     delay = uniform(1, 2)
-    print(f"⏳ Rate limiting: Waiting {delay:.2f} seconds...")
+    print(f"[WAIT] Rate limiting: Waiting {delay:.2f} seconds...")
     time.sleep(delay)
     
     headers = {
@@ -99,11 +99,11 @@ def screenshot_pdf_page(pdf_path, page_number, output_path, search_term=None, wi
         
         # If search term provided, search and highlight it
         if search_term:
-            print(f"🔍 Searching for '{search_term}' using PyMuPDF...")
+            print(f"[SCAN] Searching for '{search_term}' using PyMuPDF...")
             text_instances = page.search_for(search_term)
             
             if text_instances:
-                print(f"✅ Found {len(text_instances)} instances of '{search_term}'. Highlighting...")
+                print(f"[OK] Found {len(text_instances)} instances of '{search_term}'. Highlighting...")
                 for inst in text_instances:
                     annot = page.add_highlight_annot(inst)
                     # Use standard yellow highlight
@@ -117,7 +117,7 @@ def screenshot_pdf_page(pdf_path, page_number, output_path, search_term=None, wi
         zoom = 2.0
         mat = fitz.Matrix(zoom, zoom)
         
-        print(f"📸 Rendering page {page_number}...")
+        print(f"[SCREENSHOT] Rendering page {page_number}...")
         pix = page.get_pixmap(matrix=mat)
         
         # Save output image
@@ -126,13 +126,13 @@ def screenshot_pdf_page(pdf_path, page_number, output_path, search_term=None, wi
         if os.path.exists(output_path) and os.path.getsize(output_path) > 0:
             result['success'] = True
             result['message'] = f"Screenshot saved: {output_path}"
-            print(f"✅ {result['message']}")
+            print(f"[OK] {result['message']}")
         else:
             result['message'] = "Screenshot file is empty or not created"
             
     except Exception as e:
         result['message'] = f"Error: {str(e)}"
-        print(f"❌ {result['message']}")
+        print(f"[FAIL] {result['message']}")
         
     return result
 
@@ -187,9 +187,9 @@ Examples:
         print(f"📥 Downloading PDF from {args.url}...")
         try:
             download_pdf_to_temp(args.url, pdf_path)
-            print(f"✅ PDF downloaded")
+            print(f"[OK] PDF downloaded")
         except Exception as e:
-            print(f"❌ Failed to download PDF: {e}")
+            print(f"[FAIL] Failed to download PDF: {e}")
             sys.exit(1)
     else:
         pdf_path = args.file
@@ -200,13 +200,13 @@ Examples:
     # Determine page number
     page_number = args.page
     if args.search:
-        print(f"🔍 Searching for '{args.search}' in PDF...")
+        print(f"[SCAN] Searching for '{args.search}' in PDF...")
         found_page = find_page_with_term(pdf_path, args.search)
         if found_page:
             page_number = found_page
-            print(f"✅ Found '{args.search}' on page {page_number}")
+            print(f"[OK] Found '{args.search}' on page {page_number}")
         else:
-            print(f"❌ '{args.search}' not found in PDF")
+            print(f"[FAIL] '{args.search}' not found in PDF")
             sys.exit(1)
     
     # Take screenshot
@@ -222,7 +222,7 @@ Examples:
     if result['success']:
         sys.exit(0)
     else:
-        print(f"❌ Failed: {result['message']}")
+        print(f"[FAIL] Failed: {result['message']}")
         sys.exit(1)
 
 

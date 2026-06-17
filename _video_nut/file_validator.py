@@ -157,10 +157,10 @@ def main():
     specific_file = sys.argv[2] if len(sys.argv) > 2 else None
     
     if not os.path.exists(project_dir):
-        print(f"❌ Project directory does not exist: {project_dir}")
+        print(f"[FAIL] Project directory does not exist: {project_dir}")
         sys.exit(1)
     
-    print(f"🔍 Validating VideoNut project: {project_dir}")
+    print(f"[SCAN] Validating VideoNut project: {project_dir}")
     print("-" * 50)
     
     if specific_file:
@@ -176,13 +176,13 @@ def main():
             file_path = os.path.join(project_dir, specific_file)
             is_valid, message = validators[specific_file](file_path)
             
-            status = "✅" if is_valid else "❌"
+            status = "[OK]" if is_valid else "[FAIL]"
             print(f"{status} {specific_file}: {message}")
             
             if not is_valid:
                 sys.exit(1)
         else:
-            print(f"❌ Unknown file type: {specific_file}")
+            print(f"[FAIL] Unknown file type: {specific_file}")
             print("Supported files: truth_dossier.md, narrative_script.md, master_script.md, asset_manifest.md")
             sys.exit(1)
     else:
@@ -191,16 +191,16 @@ def main():
         
         all_valid = True
         for filename, (is_valid, message) in results.items():
-            status = "✅" if is_valid else "❌"
+            status = "[OK]" if is_valid else "[FAIL]"
             print(f"{status} {filename}: {message}")
             if not is_valid:
                 all_valid = False
         
         print("-" * 50)
         if all_valid:
-            print("🎉 All files validated successfully!")
+            print("[SUCCESS] All files validated successfully!")
         else:
-            print("❌ Some files failed validation")
+            print("[FAIL] Some files failed validation")
             sys.exit(1)
 
 if __name__ == "__main__":

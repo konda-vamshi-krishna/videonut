@@ -120,7 +120,7 @@ def download_clip(url, start_time_str, end_time_str, output_path, ffmpeg_path=No
     if not resolved_ffmpeg:
         print("⚠️ Warning: ffmpeg not found. Keyframe cuts and format merging might fail.")
     else:
-        print(f"🎬 Using ffmpeg: {resolved_ffmpeg}")
+        print(f"[WORKFLOW] Using ffmpeg: {resolved_ffmpeg}")
 
     # Parse timestamps
     try:
@@ -176,7 +176,7 @@ def download_clip(url, start_time_str, end_time_str, output_path, ffmpeg_path=No
                 out_file.unlink() # remove old file if exists
             temp_output.replace(out_file)
             
-            print(f"✅ Download successful. File saved to {out_file} ({file_size:,} bytes)")
+            print(f"[OK] Download successful. File saved to {out_file} ({file_size:,} bytes)")
             log_action_to_audit(
                 project_dir, 
                 f"Downloaded video clip [{start_time_str} to {end_time_str}]", 
@@ -188,7 +188,7 @@ def download_clip(url, start_time_str, end_time_str, output_path, ffmpeg_path=No
             raise IOError("Temp output file was not created by yt-dlp")
             
     except Exception as e:
-        print(f"❌ Error downloading clip: {e}")
+        print(f"[FAIL] Error downloading clip: {e}")
         if temp_output.exists():
             try:
                 temp_output.unlink()

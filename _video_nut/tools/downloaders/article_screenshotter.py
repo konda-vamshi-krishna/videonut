@@ -48,7 +48,7 @@ def find_quote_in_page(page, quote):
     print(f"  Strategy 1: Exact text match...")
     locator = page.get_by_text(quote, exact=False)
     if locator.count() > 0:
-        print(f"  ✅ Found with Strategy 1")
+        print(f"  [OK] Found with Strategy 1")
         # Convert Locator to ElementHandle for use with page.evaluate()
         try:
             return locator.first.element_handle(timeout=5000)
@@ -63,7 +63,7 @@ def find_quote_in_page(page, quote):
         print(f"  Strategy 2: First 5 words: '{short_quote}'...")
         locator = page.get_by_text(short_quote, exact=False)
         if locator.count() > 0:
-            print(f"  ✅ Found with Strategy 2")
+            print(f"  [OK] Found with Strategy 2")
             # Convert Locator to ElementHandle for use with page.evaluate()
             try:
                 return locator.first.element_handle(timeout=5000)
@@ -107,10 +107,10 @@ def find_quote_in_page(page, quote):
     if element_handle:
         element = element_handle.as_element()
         if element:
-            print(f"  ✅ Found with Strategy 3 (JavaScript)")
+            print(f"  [OK] Found with Strategy 3 (JavaScript)")
             return element
     
-    print(f"  ❌ Quote not found with any strategy")
+    print(f"  [FAIL] Quote not found with any strategy")
     return None
 
 
@@ -131,7 +131,7 @@ def take_quote_screenshot(url, output_path, quote=None, highlight=True, width=12
     """
     # Rate limiting
     delay = uniform(1, 2)
-    print(f"⏳ Rate limiting: Waiting {delay:.2f} seconds...")
+    print(f"[WAIT] Rate limiting: Waiting {delay:.2f} seconds...")
     time.sleep(delay)
     
     result = {
@@ -158,7 +158,7 @@ def take_quote_screenshot(url, output_path, quote=None, highlight=True, width=12
         })
         
         try:
-            print(f"🌐 Navigating to {url}...")
+            print(f"[BROWSER] Navigating to {url}...")
             # Use networkidle for better dynamic content handling
             try:
                 page.goto(url, timeout=45000, wait_until='networkidle')
@@ -168,7 +168,7 @@ def take_quote_screenshot(url, output_path, quote=None, highlight=True, width=12
                 page.goto(url, timeout=30000, wait_until='domcontentloaded')
             
             # Wait for dynamic content (increased from 3s to 5s for JS-heavy sites)
-            print("  ⏳ Waiting for dynamic content to load...")
+            print("  [WAIT] Waiting for dynamic content to load...")
             page.wait_for_timeout(5000)
             
             # Try to close cookie popups, modals, and ads
@@ -231,7 +231,7 @@ def take_quote_screenshot(url, output_path, quote=None, highlight=True, width=12
                 print(f"  ⚠️ DOM purge warning: {purge_err}")
             
             if quote:
-                print(f"🔍 Searching for quote: '{quote[:60]}{'...' if len(quote) > 60 else ''}'")
+                print(f"[SCAN] Searching for quote: '{quote[:60]}{'...' if len(quote) > 60 else ''}'")
                 
                 # Find the quote element
                 element = find_quote_in_page(page, quote)
@@ -240,7 +240,7 @@ def take_quote_screenshot(url, output_path, quote=None, highlight=True, width=12
                     result['quote_found'] = True
                     
                     # Step 1: Try multiple scroll methods (some sites block certain approaches)
-                    print("📍 Scrolling quote to center of viewport...")
+                    print("[MATCH] Scrolling quote to center of viewport...")
                     
                     # Method 1: scrollIntoView with block center (most reliable)
                     try:
@@ -248,7 +248,7 @@ def take_quote_screenshot(url, output_path, quote=None, highlight=True, width=12
                             el.scrollIntoView({ behavior: 'instant', block: 'center', inline: 'nearest' });
                         }''', element)
                         page.wait_for_timeout(500)
-                        print("  ✅ Scroll method 1 (scrollIntoView) succeeded")
+                        print("  [OK] Scroll method 1 (scrollIntoView) succeeded")
                     except Exception as scroll_err:
                         print(f"  ⚠️ Scroll method 1 failed: {scroll_err}")
                         
@@ -260,7 +260,7 @@ def take_quote_screenshot(url, output_path, quote=None, highlight=True, width=12
                                 window.scrollTo({ top: Math.max(0, scrollTop), behavior: 'instant' });
                             }''', element)
                             page.wait_for_timeout(500)
-                            print("  ✅ Scroll method 2 (scrollTo) succeeded")
+                            print("  [OK] Scroll method 2 (scrollTo) succeeded")
                         except Exception as scroll_err2:
                             print(f"  ⚠️ Scroll method 2 also failed: {scroll_err2}")
                     
@@ -280,7 +280,7 @@ def take_quote_screenshot(url, output_path, quote=None, highlight=True, width=12
                     
                     # Step 2: Highlight the element
                     if highlight:
-                        print("🎨 Highlighting quote...")
+                        print("[VISIONARY] Highlighting quote...")
                         page.evaluate('''(el) => {
                             // Save original styles
                             el.setAttribute('data-original-style', el.getAttribute('style') || '');
@@ -296,13 +296,13 @@ def take_quote_screenshot(url, output_path, quote=None, highlight=True, width=12
                             el.style.setProperty('z-index', '99999', 'important');
                             el.style.setProperty('display', 'block', 'important');
                         }''', element)
-                        print("  ✅ Quote highlighted with yellow background + orange border")
+                        print("  [OK] Quote highlighted with yellow background + orange border")
                     
                     # Step 3: Wait for CSS to apply and re-render
                     page.wait_for_timeout(800)
                     
                     # Step 4: Take the screenshot
-                    print("📸 Taking screenshot...")
+                    print("[SCREENSHOT] Taking screenshot...")
                     page.screenshot(path=output_path)
                     result['success'] = True
                     result['message'] = f"Quote found, centered, and captured: '{quote[:40]}...'"
@@ -318,7 +318,7 @@ def take_quote_screenshot(url, output_path, quote=None, highlight=True, width=12
                         fuzzy_element = find_quote_in_page(page, fuzzy_quote)
                         
                         if fuzzy_element:
-                            print(f"  ✅ Found partial match with: '{fuzzy_quote}'")
+                            print(f"  [OK] Found partial match with: '{fuzzy_quote}'")
                             
                             # Scroll and highlight
                             page.evaluate('''(el) => {
@@ -344,7 +344,7 @@ def take_quote_screenshot(url, output_path, quote=None, highlight=True, width=12
                             result['success'] = False
                             result['quote_found'] = False
                             result['message'] = f"ERROR: Quote not found on page: '{quote[:50]}...'"
-                            print(f"  ❌ {result['message']}")
+                            print(f"  [FAIL] {result['message']}")
                             # Don't take useless screenshot
                     else:
                         result['success'] = False
@@ -352,7 +352,7 @@ def take_quote_screenshot(url, output_path, quote=None, highlight=True, width=12
             
             else:
                 # No quote provided - just screenshot the article content
-                print("📸 No quote specified. Taking article screenshot...")
+                print("[SCREENSHOT] No quote specified. Taking article screenshot...")
                 
                 # Try to find and scroll to main article content
                 for selector in ['article', '.article-content', '.story-content', 
@@ -369,14 +369,14 @@ def take_quote_screenshot(url, output_path, quote=None, highlight=True, width=12
             if result['success'] and os.path.exists(output_path):
                 size = os.path.getsize(output_path)
                 if size > 0:
-                    print(f"✅ Screenshot saved: {output_path} ({size:,} bytes)")
+                    print(f"[OK] Screenshot saved: {output_path} ({size:,} bytes)")
                 else:
                     result['success'] = False
                     result['message'] = "Screenshot file is empty"
                     
         except Exception as e:
             result['message'] = f"Error: {str(e)}"
-            print(f"❌ Error: {e}")
+            print(f"[FAIL] Error: {e}")
             
         finally:
             browser.close()
@@ -432,10 +432,10 @@ NOTE: Always provide --quote for meaningful screenshots. Without it, you just ge
     )
     
     if result['success']:
-        print(f"\n✅ SUCCESS: {result['message']}")
+        print(f"\n[OK] SUCCESS: {result['message']}")
         sys.exit(0)
     else:
-        print(f"\n❌ FAILED: {result['message']}")
+        print(f"\n[FAIL] FAILED: {result['message']}")
         sys.exit(1)
 
 

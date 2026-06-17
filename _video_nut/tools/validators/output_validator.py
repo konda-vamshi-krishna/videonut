@@ -137,10 +137,10 @@ def main():
         sys.exit(1)
         
     if success:
-        print(f"✅ Validation PASSED: {msg}")
+        print(f"[OK] Validation PASSED: {msg}")
         sys.exit(0)
     else:
-        print(f"❌ Validation FAILED: {msg}")
+        print(f"[FAIL] Validation FAILED: {msg}")
         sys.exit(1)
 
 if __name__ == "__main__":

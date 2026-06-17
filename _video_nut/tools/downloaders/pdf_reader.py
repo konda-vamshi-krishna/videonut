@@ -92,7 +92,7 @@ def extract_pdf_pages_pdfplumber(pdf_bytes, page_number=None) -> tuple[list[str]
                 first_pages = list(range(min(7, total_pages)))
                 last_pages = list(range(max(0, total_pages - 4), total_pages))
                 pages_to_read = sorted(set(first_pages + last_pages))
-                print(f"📄 PDF has {total_pages} pages. Reading pages {[p+1 for p in pages_to_read]} (pdfplumber smart selection)")
+                print(f"[DOC] PDF has {total_pages} pages. Reading pages {[p+1 for p in pages_to_read]} (pdfplumber smart selection)")
                 engine_desc = f"pdfplumber (smart selection: {len(pages_to_read)}/{total_pages} pages)"
                 
             for idx in pages_to_read:
@@ -126,7 +126,7 @@ def extract_pdf_pages_pypdf(pdf_bytes, page_number=None) -> tuple[list[str], str
             first_pages = list(range(min(7, total_pages)))
             last_pages = list(range(max(0, total_pages - 4), total_pages))
             pages_to_read = sorted(set(first_pages + last_pages))
-            print(f"📄 PDF has {total_pages} pages. Reading pages {[p+1 for p in pages_to_read]} (pypdf smart selection)")
+            print(f"[DOC] PDF has {total_pages} pages. Reading pages {[p+1 for p in pages_to_read]} (pypdf smart selection)")
             engine_desc = f"pypdf (smart selection: {len(pages_to_read)}/{total_pages} pages)"
             
         for idx in pages_to_read:
@@ -174,7 +174,7 @@ def read_pdf(url, search_term=None, page_number=None, output_path=None, project_
                 raise IOError("Downloaded PDF file is 0 bytes")
             temp_path.replace(out_path)
             
-            print(f"💾 Raw PDF downloaded and saved to: {out_path}")
+            print(f"[SAVE] Raw PDF downloaded and saved to: {out_path}")
             log_action_to_audit(project_dir, "Downloaded PDF file", url=url, local_path=str(out_path), status="ok")
 
         # Select parser engine
@@ -213,7 +213,7 @@ def read_pdf(url, search_term=None, page_number=None, output_path=None, project_
             
         # 2. If search term provided
         if search_term:
-            print(f"🔍 Searching for: '{search_term}'")
+            print(f"[SCAN] Searching for: '{search_term}'")
             search_lower = search_term.lower()
             matches = []
             
@@ -242,10 +242,10 @@ def read_pdf(url, search_term=None, page_number=None, output_path=None, project_
                             })
 
             if matches:
-                print(f"\n✅ Found {len(matches)} matches for '{search_term}':\n")
+                print(f"\n[OK] Found {len(matches)} matches for '{search_term}':\n")
                 for match_idx, match in enumerate(matches[:10]):
                     print(f"{'='*60}")
-                    print(f"📍 Match {match_idx+1} - Page {match['page']}")
+                    print(f"[MATCH] Match {match_idx+1} - Page {match['page']}")
                     print(f"{'='*60}")
                     print(f"Line: {match['line']}")
                     print(f"\nContext:")
@@ -256,7 +256,7 @@ def read_pdf(url, search_term=None, page_number=None, output_path=None, project_
                     print(f"... and {len(matches) - 10} more matches")
                 
                 best_page = matches[0]['page']
-                print(f"\n📸 Suggested page for screenshot: Page {best_page}")
+                print(f"\n[SCREENSHOT] Suggested page for screenshot: Page {best_page}")
                 print(f"   Use: python pdf_reader.py --url \"{url}\" --page {best_page}")
                 
                 log_action_to_audit(
@@ -268,7 +268,7 @@ def read_pdf(url, search_term=None, page_number=None, output_path=None, project_
                     details=f"Engine: {engine}"
                 )
             else:
-                print(f"❌ No matches found for '{search_term}'")
+                print(f"[FAIL] No matches found for '{search_term}'")
                 log_action_to_audit(
                     project_dir,
                     f"Searched PDF for '{search_term}' (0 matches)",

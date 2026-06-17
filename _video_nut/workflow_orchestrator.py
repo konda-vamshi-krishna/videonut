@@ -48,7 +48,7 @@ class VideoNutOrchestrator:
         # Auto-detect best CLI
         for cli in ["claude", "gemini", "opencode", "qwen"]:
             if shutil.which(cli):
-                print(f"🔍 Auto-detected CLI runner: '{cli}'")
+                print(f"[SCAN] Auto-detected CLI runner: '{cli}'")
                 return cli
                 
         print("⚠️  No CLI runners (claude, gemini, opencode, qwen) found in PATH.")
@@ -105,7 +105,7 @@ class VideoNutOrchestrator:
             if updated:
                 with open(config_path, 'w', encoding='utf-8') as f:
                     f.writelines(lines)
-                print(f"⚙️  Synced config.yaml with current_project = '{self.project_name}'")
+                print(f"[CONFIG]  Synced config.yaml with current_project = '{self.project_name}'")
         except Exception as e:
             print(f"⚠️  Failed to sync config.yaml: {str(e)}")
 
@@ -127,7 +127,7 @@ class VideoNutOrchestrator:
             cmd_parts = ["qwen", agent_name]
             
         cmd_str = " ".join(cmd_parts)
-        print(f"🤖 Programmatically invoking agent: '{agent_name}' using {self.cli_runner}...")
+        print(f"[AGENT] Programmatically invoking agent: '{agent_name}' using {self.cli_runner}...")
         print(f"   Command: {cmd_str}")
         
         try:
@@ -142,26 +142,26 @@ class VideoNutOrchestrator:
             )
             
             if result.returncode == 0:
-                print(f"✅ Agent '{agent_name}' completed execution successfully.")
+                print(f"[OK] Agent '{agent_name}' completed execution successfully.")
                 return True
             else:
-                print(f"❌ Agent '{agent_name}' execution failed.")
+                print(f"[FAIL] Agent '{agent_name}' execution failed.")
                 print(f"STDOUT: {result.stdout}")
                 print(f"STDERR: {result.stderr}")
                 return False
         except Exception as e:
-            print(f"❌ Subprocess execution error for agent '{agent_name}': {str(e)}")
+            print(f"[FAIL] Subprocess execution error for agent '{agent_name}': {str(e)}")
             return False
 
     def run_mock_agent(self, agent_name):
         """
         Simulates agent execution by creating valid mock outputs for testing.
         """
-        print(f"🎭 [MOCK] Simulating execution for agent '{agent_name}'...")
+        print(f"[MOCK] [MOCK] Simulating execution for agent '{agent_name}'...")
         
         if agent_name == "investigator":
             file_path = os.path.join(self.project_path, "truth_dossier.md")
-            content = """# 🕵️ Investigator Report: Truth Dossier
+            content = """# [INVESTIGATOR] Investigator Report: Truth Dossier
 1. What are the key elements?
 2. Research question 2: How does this work?
 3. Question 3: What are the main points?
@@ -187,7 +187,7 @@ Sources:
                 
         elif agent_name == "scriptwriter":
             file_path = os.path.join(self.project_path, "narrative_script.md")
-            content = """# ✍️ Narrative Script
+            content = """# [WRITE] Narrative Script
 [HOOK]
 This is the dramatic opening hook of the documentary video.
 [Visual: Montage of historical footage]
@@ -213,7 +213,7 @@ NARRATOR: Thank you for watching. Don't forget to like and subscribe for more de
                 
         elif agent_name == "director":
             file_path = os.path.join(self.project_path, "master_script.md")
-            content = """# 🎬 Director Master Script
+            content = """# [WORKFLOW] Director Master Script
 - Scene 1: Introduction
   [Visual: Montage, Source: https://youtube.com/watch?v=dQw4w9WgXcQ]
   Narration: Welcome to the show.
@@ -223,7 +223,7 @@ NARRATOR: Thank you for watching. Don't forget to like and subscribe for more de
                 
         elif agent_name == "visionary":
             file_path = os.path.join(self.project_path, "visual_prompts.md")
-            content = """# 🎨 Visual Image Prompts
+            content = """# [VISIONARY] Visual Image Prompts
 - Image 1: Cinematic wide shot of retro computers, neon lights, 4k.
 """
             with open(file_path, 'w', encoding='utf-8') as f:
@@ -231,7 +231,7 @@ NARRATOR: Thank you for watching. Don't forget to like and subscribe for more de
                 
         elif agent_name == "scavenger":
             file_path = os.path.join(self.project_path, "asset_manifest.md")
-            content = """# 🦅 Asset Manifest
+            content = """# [SCAVENGER] Asset Manifest
 This is the list of all video and image assets that need to be downloaded for the video project.
 We are specifying the URLs and time ranges for the clips to be trimmed by the Archivist.
 
@@ -259,7 +259,7 @@ We are specifying the URLs and time ranges for the clips to be trimmed by the Ar
             report_path = os.path.join(self.project_path, "review_report.md")
             
             if iterations == 0:
-                print("🎭 [MOCK] Simulating EIC failure on first pass to test rework loop...")
+                print("[MOCK] [MOCK] Simulating EIC failure on first pass to test rework loop...")
                 result_data = {
                     "verdict": "REJECTED",
                     "total_score": 150,
@@ -278,9 +278,9 @@ We are specifying the URLs and time ranges for the clips to be trimmed by the Ar
                     "passed_agents": ["prompt_agent"],
                     "rerun_from": "investigator"
                 }
-                report_content = "# ❌ EIC REJECTION REPORT\nCritical issues found in investigator stage."
+                report_content = "# [FAIL] EIC REJECTION REPORT\nCritical issues found in investigator stage."
             else:
-                print(f"🎭 [MOCK] Simulating EIC approval (Rework iteration: {iterations})...")
+                print(f"[MOCK] [MOCK] Simulating EIC approval (Rework iteration: {iterations})...")
                 result_data = {
                     "verdict": "APPROVED",
                     "total_score": 350,
@@ -290,7 +290,7 @@ We are specifying the URLs and time ranges for the clips to be trimmed by the Ar
                     "passed_agents": ["investigator", "scriptwriter", "director", "scavenger", "visionary", "archivist"],
                     "rerun_from": ""
                 }
-                report_content = "# ✅ EIC APPROVAL REPORT\nAll checks passed!"
+                report_content = "# [OK] EIC APPROVAL REPORT\nAll checks passed!"
                 
             with open(result_path, 'w', encoding='utf-8') as f:
                 json.dump(result_data, f, indent=2)
@@ -306,7 +306,7 @@ We are specifying the URLs and time ranges for the clips to be trimmed by the Ar
             print(f"⚠️  Validator script '{validator_script}' not found. Skipping gate.")
             return True
             
-        print(f"🛡️  Running validation gate for '{val_type}' on '{os.path.basename(file_path)}'...")
+        print(f"[GATE]  Running validation gate for '{val_type}' on '{os.path.basename(file_path)}'...")
         try:
             result = subprocess.run(
                 [sys.executable, validator_script, val_type, file_path],
@@ -317,11 +317,11 @@ We are specifying the URLs and time ranges for the clips to be trimmed by the Ar
                 print(f"  {result.stdout.strip()}")
                 return True
             else:
-                print(f"❌ Gate FAILED: {result.stdout.strip()}")
+                print(f"[FAIL] Gate FAILED: {result.stdout.strip()}")
                 print(f"  Error Details: {result.stderr.strip()}")
                 return False
         except Exception as e:
-            print(f"❌ Error running validator gate: {str(e)}")
+            print(f"[FAIL] Error running validator gate: {str(e)}")
             return False
 
     def run_stale_detection(self):
@@ -330,7 +330,7 @@ We are specifying the URLs and time ranges for the clips to be trimmed by the Ar
         if not os.path.exists(detector_script):
             return
             
-        print("🔍 Scanning for stale pipeline stages...")
+        print("[SCAN] Scanning for stale pipeline stages...")
         try:
             result = subprocess.run(
                 [sys.executable, detector_script, self.project_path],
@@ -352,10 +352,10 @@ We are specifying the URLs and time ranges for the clips to be trimmed by the Ar
 
     def run_investigation(self):
         if self.checkpoints["investigation_complete"] and not self.force:
-            print("⏭️ Investigation stage already completed, skipping...")
+            print("[SKIP] Investigation stage already completed, skipping...")
             return True
             
-        print("\n🔍 --- Phase 1: Investigation ---")
+        print("\n[SCAN] --- Phase 1: Investigation ---")
         success = self.run_agent_cli("investigator")
         if not success:
             return False
@@ -371,10 +371,10 @@ We are specifying the URLs and time ranges for the clips to be trimmed by the Ar
         
     def run_scriptwriting(self):
         if self.checkpoints["scriptwriting_complete"] and not self.force:
-            print("⏭️ Scriptwriting stage already completed, skipping...")
+            print("[SKIP] Scriptwriting stage already completed, skipping...")
             return True
             
-        print("\n✍️ --- Phase 2: Scriptwriting ---")
+        print("\n[WRITE] --- Phase 2: Scriptwriting ---")
         success = self.run_agent_cli("scriptwriter")
         if not success:
             return False
@@ -390,10 +390,10 @@ We are specifying the URLs and time ranges for the clips to be trimmed by the Ar
 
     def run_direction(self):
         if self.checkpoints["direction_complete"] and not self.force:
-            print("⏭️ Direction stage already completed, skipping...")
+            print("[SKIP] Direction stage already completed, skipping...")
             return True
             
-        print("\n🎬 --- Phase 3: Direction ---")
+        print("\n[WORKFLOW] --- Phase 3: Direction ---")
         success = self.run_agent_cli("director")
         if not success:
             return False
@@ -433,13 +433,13 @@ We are specifying the URLs and time ranges for the clips to be trimmed by the Ar
         run_scav = not self.checkpoints.get("scavenging_complete", False) or self.force
         
         if not run_vis and not run_scav:
-            print("⏭️ Visionary and Scavenging stages already completed, skipping...")
+            print("[SKIP] Visionary and Scavenging stages already completed, skipping...")
             return True
             
-        print("\n⚡ --- Phase 4 & 5: Parallel Visionary & Scavenging ---")
+        print("\n[PARALLEL] --- Phase 4 & 5: Parallel Visionary & Scavenging ---")
         
         def run_one_agent(name, func):
-            print(f"🚀 [Parallel Thread] Spawning {name}...")
+            print(f"[RUN] [Parallel Thread] Spawning {name}...")
             return func()
             
         with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
@@ -454,9 +454,9 @@ We are specifying the URLs and time ranges for the clips to be trimmed by the Ar
                 name = futures[future]
                 res = future.result()
                 if res:
-                    print(f"✅ Parallel Thread '{name}' completed successfully!")
+                    print(f"[OK] Parallel Thread '{name}' completed successfully!")
                 else:
-                    print(f"❌ Parallel Thread '{name}' FAILED!")
+                    print(f"[FAIL] Parallel Thread '{name}' FAILED!")
                     success = False
                     
         if success:
@@ -467,10 +467,10 @@ We are specifying the URLs and time ranges for the clips to be trimmed by the Ar
 
     def run_archiving(self):
         if self.checkpoints["archiving_complete"] and not self.force:
-            print("⏭️ Archiving stage already completed, skipping...")
+            print("[SKIP] Archiving stage already completed, skipping...")
             return True
             
-        print("\n💾 --- Phase 6: Archiving ---")
+        print("\n[SAVE] --- Phase 6: Archiving ---")
         success = self.run_agent_cli("archivist")
         if not success:
             return False
@@ -482,10 +482,10 @@ We are specifying the URLs and time ranges for the clips to be trimmed by the Ar
 
     def run_eic_review_and_rework(self):
         """Runs the EIC quality audit and loops if rework is required."""
-        print("\n🧐 --- Phase 7: Editor-in-Chief Review ---")
+        print("\n[EIC] --- Phase 7: Editor-in-Chief Review ---")
         success = self.run_agent_cli("eic")
         if not success:
-            print("❌ EIC agent execution failed.")
+            print("[FAIL] EIC agent execution failed.")
             return False
             
         # Call auto_rework.py to check for rejections
@@ -494,7 +494,7 @@ We are specifying the URLs and time ranges for the clips to be trimmed by the Ar
             print("⚠️  auto_rework.py script not found. Skipping auto-rework check.")
             return True
             
-        print("🔍 Checking EIC audit verdict...")
+        print("[SCAN] Checking EIC audit verdict...")
         try:
             result = subprocess.run(
                 [sys.executable, rework_script, self.project_path],
@@ -513,7 +513,7 @@ We are specifying the URLs and time ranges for the clips to be trimmed by the Ar
                 
                 iterations = self.checkpoints.get("rework_iterations", 0)
                 if iterations >= self.rework_limit:
-                    print(f"\n🚨 REWORK LIMIT REACHED ({self.rework_limit} loops).")
+                    print(f"\n[ALERT] REWORK LIMIT REACHED ({self.rework_limit} loops).")
                     print("Stopping pipeline and hand control to the user.")
                     print(f"Please review {os.path.join(self.project_path, 'review_report.md')} and correction_log.md.")
                     return False
@@ -521,21 +521,21 @@ We are specifying the URLs and time ranges for the clips to be trimmed by the Ar
                 self.checkpoints["rework_iterations"] = iterations + 1
                 self.save_checkpoints()
                 
-                print(f"\n🔄 EIC Rejected the audit. Triggering Rework Loop #{iterations + 1} starting from stage '{rerun_stage}'...")
+                print(f"\n[REWORK] EIC Rejected the audit. Triggering Rework Loop #{iterations + 1} starting from stage '{rerun_stage}'...")
                 # Loop back: re-run the pipeline from the rerun_stage
                 return "loop_back"
             else:
-                print("\n🎉 EIC APPROVED! No rework required.")
+                print("\n[SUCCESS] EIC APPROVED! No rework required.")
                 self.checkpoints["rework_iterations"] = 0
                 self.save_checkpoints()
                 return True
         except Exception as e:
-            print(f"❌ Error during auto-rework checking: {str(e)}")
+            print(f"[FAIL] Error during auto-rework checking: {str(e)}")
             return False
 
     def run_full_workflow(self):
         """Run the complete VideoNut workflow"""
-        print("🎬 Starting VideoNut Programmatic Video Production Workflow")
+        print("[WORKFLOW] Starting VideoNut Programmatic Video Production Workflow")
         print(f"Project Path: {self.project_path}")
         print(f"Selected Runner: '{self.cli_runner}'")
         
@@ -581,7 +581,7 @@ We are specifying the URLs and time ranges for the clips to be trimmed by the Ar
                 # approved!
                 break
                 
-        print("\n🎉 Complete video production pipeline finished successfully!")
+        print("\n[SUCCESS] Complete video production pipeline finished successfully!")
         return True
 
 def main():
@@ -597,7 +597,7 @@ def main():
     args = parser.parse_args()
     
     if not os.path.exists(args.project):
-        print(f"❌ Project directory does not exist: {args.project}")
+        print(f"[FAIL] Project directory does not exist: {args.project}")
         sys.exit(1)
         
     orchestrator = VideoNutOrchestrator(
@@ -616,7 +616,7 @@ def main():
         print(f"Rework iterations: {orchestrator.checkpoints.get('rework_iterations', 0)}")
         print()
         
-        status_icons = {True: "✅", False: "⏳"}
+        status_icons = {True: "[OK]", False: "[WAIT]"}
         steps = [
             ("Investigation", "investigation_complete", "truth_dossier.md"),
             ("Scriptwriting", "scriptwriting_complete", "narrative_script.md"),
@@ -647,13 +647,13 @@ def main():
             "direction": ("Visioning (AI Prompts) & Scavenging", "visionary / scavenger", "Create visual_prompts.md & asset_manifest.md"),
             "scavenging": ("Archiving", "archivist", "Download all assets to assets/ folder"),
             "archiving": ("EIC Review", "eic", "Audit all assets and scripts"),
-            "eic": ("Complete", None, "🎉 All done! Your video assets are ready for editing."),
+            "eic": ("Complete", None, "[SUCCESS] All done! Your video assets are ready for editing."),
         }
         
         last_step = orchestrator.checkpoints['last_step']
         step_name, command, description = next_steps.get(last_step, next_steps["none"])
         
-        print(f"📍 Current position: After '{last_step}'")
+        print(f"[MATCH] Current position: After '{last_step}'")
         print(f"👉 Next step: {step_name}")
         if command:
             print(f"🔧 Command: {orchestrator.cli_runner} {command}")
@@ -664,9 +664,9 @@ def main():
     success = orchestrator.run_full_workflow()
     
     if success:
-        print(f"\n✅ Workflow completed! Checkpoint file: {orchestrator.checkpoint_file}")
+        print(f"\n[OK] Workflow completed! Checkpoint file: {orchestrator.checkpoint_file}")
     else:
-        print(f"\n❌ Workflow failed. Checkpoint file: {orchestrator.checkpoint_file}")
+        print(f"\n[FAIL] Workflow failed. Checkpoint file: {orchestrator.checkpoint_file}")
         sys.exit(1)
 
 if __name__ == "__main__":

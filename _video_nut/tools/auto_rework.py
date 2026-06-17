@@ -100,7 +100,7 @@ def apply_rework_checkpoints(project_path, fail_stage):
         "archiving": "archiving_complete"
     }
 
-    print(f"🔄 Resetting checkpoints starting from stage: '{fail_stage}'")
+    print(f"[REWORK] Resetting checkpoints starting from stage: '{fail_stage}'")
     for idx in range(fail_idx, len(STAGE_ORDER)):
         stage_name = STAGE_ORDER[idx]
         key = stage_to_key.get(stage_name)
@@ -128,24 +128,24 @@ def main():
         
     project_path = sys.argv[1]
     if not os.path.exists(project_path):
-        print(f"❌ Project path '{project_path}' does not exist.")
+        print(f"[FAIL] Project path '{project_path}' does not exist.")
         sys.exit(1)
         
     fail_stage, msg = parse_review_result(project_path)
     if not fail_stage:
-        print(f"✅ Rework not required: {msg}")
+        print(f"[OK] Rework not required: {msg}")
         sys.exit(0)
         
-    print(f"🚨 Rework required: {msg}")
+    print(f"[ALERT] Rework required: {msg}")
     success, reset_msg = apply_rework_checkpoints(project_path, fail_stage)
     
     if success:
-        print(f"✅ Rework initialized successfully: {reset_msg}")
+        print(f"[OK] Rework initialized successfully: {reset_msg}")
         # Print fail stage in a special tag for parent orchestrator parsing
         print(f"RERUN_STAGE:{fail_stage}")
         sys.exit(0)
     else:
-        print(f"❌ Rework initialization failed: {reset_msg}")
+        print(f"[FAIL] Rework initialization failed: {reset_msg}")
         sys.exit(1)
 
 if __name__ == "__main__":

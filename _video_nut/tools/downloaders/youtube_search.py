@@ -140,7 +140,7 @@ def format_results(videos, output_format='text'):
     
     # Text format
     output = []
-    output.append(f"\n🎬 YouTube Search Results ({len(videos)} videos found)\n")
+    output.append(f"\n[WORKFLOW] YouTube Search Results ({len(videos)} videos found)\n")
     output.append("=" * 60)
     
     for i, video in enumerate(videos, 1):
@@ -272,11 +272,11 @@ Examples:
                     if res.returncode == 0:
                         with open(output_file, "w", encoding="utf-8") as f:
                             f.write(res.stdout)
-                        print(f"   ✅ Saved transcript: {output_file}")
+                        print(f"   [OK] Saved transcript: {output_file}")
                     else:
-                        print(f"   ❌ Failed to get transcript for {video_id}: {res.stderr.strip() if res.stderr else 'Unknown error'}")
+                        print(f"   [FAIL] Failed to get transcript for {video_id}: {res.stderr.strip() if res.stderr else 'Unknown error'}")
                 except Exception as e:
-                    print(f"   ❌ Error downloading transcript for {video_id}: {e}")
+                    print(f"   [FAIL] Error downloading transcript for {video_id}: {e}")
     else:
         parser.print_help()
         sys.exit(1)

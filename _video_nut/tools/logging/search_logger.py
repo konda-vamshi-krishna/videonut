@@ -98,8 +98,8 @@ def log_search(query, language='en', agent='unknown', project=None,
         f.write(json.dumps(entry, ensure_ascii=False) + '\n')
     
     # Also log to console
-    lang_indicator = f"🇮🇳 {entry['language_name']}" if entry['is_regional'] else f"🌐 {entry['language_name']}"
-    status = "✅" if success else "❌"
+    lang_indicator = f"🇮🇳 {entry['language_name']}" if entry['is_regional'] else f"[BROWSER] {entry['language_name']}"
+    status = "[OK]" if success else "[FAIL]"
     
     print(f"{status} [{agent}] {lang_indicator}: \"{query}\" ({results_count} results)")
     
@@ -213,7 +213,7 @@ def display_history(entries):
         lang = entry.get('language_name', entry.get('language', '?'))
         query = entry.get('query', '')[:50]  # Truncate long queries
         results = entry.get('results_count', 0)
-        status = "✅" if entry.get('success') else "❌"
+        status = "[OK]" if entry.get('success') else "[FAIL]"
         regional = "🇮🇳" if entry.get('is_regional') else "  "
         
         print(f"{status} {regional} [{timestamp}] {agent:12} | {lang:10} | {query}")
@@ -239,7 +239,7 @@ def display_statistics(stats):
         regional_marker = "🇮🇳" if lang in REGIONAL_LANGUAGES else "  "
         print(f"   {regional_marker} {lang_name:15} {bar} ({count})")
     
-    print("\n🤖 By Agent:")
+    print("\n[AGENT] By Agent:")
     for agent, count in sorted(stats.get('by_agent', {}).items(), key=lambda x: -x[1]):
         bar = "█" * min(count, 30)
         print(f"   {agent:15} {bar} ({count})")
@@ -320,7 +320,7 @@ Regional Language Codes:
             results_count=args.results,
             notes=args.notes
         )
-        print("\n✅ Search logged successfully")
+        print("\n[OK] Search logged successfully")
     
     elif args.view:
         entries = load_search_history(

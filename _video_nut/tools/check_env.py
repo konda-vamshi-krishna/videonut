@@ -12,40 +12,40 @@ if hasattr(sys.stderr, 'reconfigure'):
 def check_command(cmd, name):
     path = shutil.which(cmd)
     if path:
-        print(f"✅ {name} found at: {path}")
+        print(f"[OK] {name} found at: {path}")
         return True
     else:
-        print(f"❌ {name} NOT found in PATH.")
+        print(f"[FAIL] {name} NOT found in PATH.")
         return False
 
 def check_import(module_name):
     try:
         __import__(module_name)
-        print(f"✅ Python module '{module_name}' is installed.")
+        print(f"[OK] Python module '{module_name}' is installed.")
         return True
     except ImportError:
-        print(f"❌ Python module '{module_name}' is MISSING.")
+        print(f"[FAIL] Python module '{module_name}' is MISSING.")
         return False
 
 def main():
-    print("🔍 VideoNut Environment Check...")
+    print("[SCAN] VideoNut Environment Check...")
     print("-" * 30)
 
     all_good = True
 
     # 1. Check Python version
     if sys.version_info < (3, 8):
-        print("❌ Python 3.8+ is required.")
+        print("[FAIL] Python 3.8+ is required.")
         all_good = False
     else:
-        print(f"✅ Python Version: {sys.version}")
+        print(f"[OK] Python Version: {sys.version}")
 
     # 2. Check FFmpeg
     if not check_command("ffmpeg", "FFmpeg"):
         # Check local bin fallback
         local_bin = os.path.join(os.path.dirname(__file__), "bin", "ffmpeg.exe")
         if os.path.exists(local_bin):
-             print(f"✅ FFmpeg found in local bin: {local_bin}")
+             print(f"[OK] FFmpeg found in local bin: {local_bin}")
         else:
              print("   (Please install FFmpeg or place it in tools/bin/)")
              all_good = False
@@ -66,14 +66,14 @@ def main():
 
     for tool_name, tool_path in new_tools:
         if os.path.exists(tool_path):
-            print(f"✅ Tool found: {tool_name}")
+            print(f"[OK] Tool found: {tool_name}")
         else:
-            print(f"❌ Tool missing: {tool_name} at {tool_path}")
+            print(f"[FAIL] Tool missing: {tool_name} at {tool_path}")
             all_good = False
 
     print("-" * 30)
     if all_good:
-        print("🚀 System is READY for VideoNut Agents.")
+        print("[RUN] System is READY for VideoNut Agents.")
         sys.exit(0)
     else:
         print("⚠️ System has ISSUES. Please fix missing dependencies.")

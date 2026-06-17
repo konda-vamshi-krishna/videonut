@@ -93,7 +93,7 @@ def take_screenshot(url, output_path, project_path=None):
     urls_to_try = [url]
     
     if is_twitter:
-        print("🐦 Twitter/X URL detected. Adding Nitter mirror bypass targets...")
+        print("[TWITTER] Twitter/X URL detected. Adding Nitter mirror bypass targets...")
         for mirror in NITTER_MIRRORS:
             urls_to_try.append(bypass_twitter_url(url, mirror))
 
@@ -117,9 +117,9 @@ def take_screenshot(url, output_path, project_path=None):
             try:
                 attempted_url = target_url
                 if target_url != url:
-                    print(f"🔄 Attempting Nitter mirror bypass: {target_url}")
+                    print(f"[REWORK] Attempting Nitter mirror bypass: {target_url}")
                 else:
-                    print(f"📸 Screenshotting: {target_url}")
+                    print(f"[SCREENSHOT] Screenshotting: {target_url}")
                 
                 # Navigate
                 page.goto(target_url, timeout=30000)
@@ -154,7 +154,7 @@ def take_screenshot(url, output_path, project_path=None):
             temp_output.replace(out_file)
             
             size = out_file.stat().st_size
-            print(f"✅ Screenshot saved successfully to {out_file} ({size:,} bytes)")
+            print(f"[OK] Screenshot saved successfully to {out_file} ({size:,} bytes)")
             
             details = f"Loaded URL: {attempted_url}"
             if attempted_url != url:
@@ -169,7 +169,7 @@ def take_screenshot(url, output_path, project_path=None):
                 details=details
             )
         else:
-            print(f"❌ Failed to take screenshot for all attempts: {last_error}")
+            print(f"[FAIL] Failed to take screenshot for all attempts: {last_error}")
             log_action_to_audit(
                 project_path,
                 f"Failed to capture screenshot: {last_error}",

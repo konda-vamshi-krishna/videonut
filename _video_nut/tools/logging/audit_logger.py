@@ -138,12 +138,12 @@ def log_action(project_path: str, category: str, action: str, url: str = "",
 
             # Define emojis for each category
             emojis = {
-                "search": "🔍",
+                "search": "[SCAN]",
                 "download": "📥",
-                "screenshot": "📸",
-                "validate": "✅",
+                "screenshot": "[SCREENSHOT]",
+                "validate": "[OK]",
                 "read": "📖",
-                "other": "⚙️"
+                "other": "[CONFIG]"
             }
 
             status_emojis = {
@@ -160,7 +160,7 @@ def log_action(project_path: str, category: str, action: str, url: str = "",
                 if not ents:
                     continue
                 
-                emoji = emojis.get(cat, "⚙️")
+                emoji = emojis.get(cat, "[CONFIG]")
                 md_content.append(f"### {emoji} {cat.capitalize()} ({len(ents)})")
                 
                 # Write table for this category

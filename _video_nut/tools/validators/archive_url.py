@@ -162,9 +162,9 @@ def archive_batch(urls, output_file=None):
         results.append(result)
         
         if result['success']:
-            print(f"✅ Archived: {result['archived_url']}")
+            print(f"[OK] Archived: {result['archived_url']}")
         else:
-            print(f"❌ Failed: {result['message']}")
+            print(f"[FAIL] Failed: {result['message']}")
     
     # Save results if output file specified
     if output_file:
@@ -250,12 +250,12 @@ Why Archive?
                 if args.json:
                     print(json.dumps({'archived': True, 'url': archived}))
                 else:
-                    print(f"✅ Already archived: {archived}")
+                    print(f"[OK] Already archived: {archived}")
             else:
                 if args.json:
                     print(json.dumps({'archived': False, 'url': None}))
                 else:
-                    print("❌ Not archived yet")
+                    print("[FAIL] Not archived yet")
         else:
             result = archive_url(args.url)
             
@@ -263,11 +263,11 @@ Why Archive?
                 print(json.dumps(result))
             else:
                 if result['success']:
-                    print(f"\n✅ Successfully archived!")
+                    print(f"\n[OK] Successfully archived!")
                     print(f"   Original: {result['original_url']}")
                     print(f"   Archived: {result['archived_url']}")
                 else:
-                    print(f"\n❌ Archive failed: {result['message']}")
+                    print(f"\n[FAIL] Archive failed: {result['message']}")
                     print(f"   Try manually at: https://archive.is/")
 
 

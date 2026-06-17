@@ -177,10 +177,10 @@ def download_and_read_docx(url=None, file_path=None, search_term=None, output_pa
                     raise IOError("Downloaded file is 0 bytes")
                 temp_path.replace(out_path)
                 
-                print(f"💾 Word document downloaded and saved to: {out_path}")
+                print(f"[SAVE] Word document downloaded and saved to: {out_path}")
                 log_action_to_audit(project_dir, "Downloaded DOCX file", url=url, local_path=str(out_path), status="ok")
         except Exception as e:
-            print(f"❌ Error downloading DOCX: {e}")
+            print(f"[FAIL] Error downloading DOCX: {e}")
             log_action_to_audit(project_dir, f"Failed to download DOCX: {e}", url=url, status="failed", details=str(e))
             sys.exit(1)
             
@@ -198,11 +198,11 @@ def download_and_read_docx(url=None, file_path=None, search_term=None, output_pa
     try:
         full_text, tables, engine = extract_docx_text(doc_data)
         lines = full_text.split("\n")
-        print(f"📄 DOCX loaded using {engine}: {len(lines)} lines found")
+        print(f"[DOC] DOCX loaded using {engine}: {len(lines)} lines found")
         
         # 4. Search keyword if specified
         if search_term:
-            print(f"🔍 Searching for: '{search_term}'")
+            print(f"[SCAN] Searching for: '{search_term}'")
             search_lower = search_term.lower()
             matches = []
             
@@ -218,10 +218,10 @@ def download_and_read_docx(url=None, file_path=None, search_term=None, output_pa
                     })
                     
             if matches:
-                print(f"\n✅ Found {len(matches)} matches for '{search_term}':\n")
+                print(f"\n[OK] Found {len(matches)} matches for '{search_term}':\n")
                 for m_idx, match in enumerate(matches[:15]):
                     print(f"{'='*60}")
-                    print(f"📍 Match {m_idx+1} - Line {match['line_num']}")
+                    print(f"[MATCH] Match {m_idx+1} - Line {match['line_num']}")
                     print(f"{'='*60}")
                     print(f"Line: {match['line']}")
                     print(f"\nContext:")
@@ -239,7 +239,7 @@ def download_and_read_docx(url=None, file_path=None, search_term=None, output_pa
                     details=f"Engine: {engine}"
                 )
             else:
-                print(f"❌ No matches found for '{search_term}'")
+                print(f"[FAIL] No matches found for '{search_term}'")
                 log_action_to_audit(
                     project_dir,
                     f"Searched DOCX for '{search_term}' (0 matches)",
@@ -274,7 +274,7 @@ def download_and_read_docx(url=None, file_path=None, search_term=None, output_pa
         )
             
     except Exception as e:
-        print(f"❌ Error parsing DOCX: {e}")
+        print(f"[FAIL] Error parsing DOCX: {e}")
         log_action_to_audit(
             project_dir,
             f"Failed to parse DOCX: {e}",

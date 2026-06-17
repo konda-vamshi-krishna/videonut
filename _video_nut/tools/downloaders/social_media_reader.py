@@ -81,7 +81,7 @@ def read_tweet_html(url) -> dict:
             nitter_url = nitter_url.replace(domain, mirror)
             
         try:
-            print(f"🕵️ Requesting Nitter mirror: {nitter_url}")
+            print(f"[INVESTIGATOR] Requesting Nitter mirror: {nitter_url}")
             res = requests.get(nitter_url, headers=headers, timeout=15)
             res.raise_for_status()
             
@@ -155,7 +155,7 @@ def read_tweet_ntscraper(url) -> dict:
     
     # Try ntscraper
     nitter = NTNitter()
-    print(f"🕵️ Scraping tweet ID {tweet_id} via ntscraper...")
+    print(f"[INVESTIGATOR] Scraping tweet ID {tweet_id} via ntscraper...")
     
     # ntscraper get_tweets with user mode and limit=1
     tweets = nitter.get_tweets(username, mode='user', number=5)
@@ -199,7 +199,7 @@ def read_tweet(url, project_path=None) -> dict:
         try:
             scraped_data = read_tweet_html(url)
         except Exception as e:
-            print(f"❌ Scraper failed: {e}")
+            print(f"[FAIL] Scraper failed: {e}")
             log_action_to_audit(project_path, f"Failed to read tweet: {e}", url=url, status="failed")
             sys.exit(1)
 
@@ -232,7 +232,7 @@ def search_tweets(query, max_results=10, project_path=None) -> list[dict]:
     for mirror in NITTER_MIRRORS:
         search_url = f"https://{mirror}/search?f=tweets&q={encoded_query}"
         try:
-            print(f"🕵️ Searching Nitter mirror: https://{mirror}")
+            print(f"[INVESTIGATOR] Searching Nitter mirror: https://{mirror}")
             res = requests.get(search_url, headers=headers, timeout=15)
             res.raise_for_status()
             
@@ -271,7 +271,7 @@ def search_tweets(query, max_results=10, project_path=None) -> list[dict]:
                 })
                 
             if results:
-                print(f"✅ Search yielded {len(results)} tweets on {mirror}")
+                print(f"[OK] Search yielded {len(results)} tweets on {mirror}")
                 log_action_to_audit(
                     project_path,
                     f"Searched tweets for '{query}' (Found {len(results)} matches)",
@@ -317,11 +317,11 @@ def main():
             out_file.parent.mkdir(parents=True, exist_ok=True)
             with open(out_file, "w", encoding="utf-8") as f:
                 json.dump(result, f, indent=2, ensure_ascii=False)
-            print(f"\n💾 Saved JSON results to: {out_file}")
+            print(f"\n[SAVE] Saved JSON results to: {out_file}")
             
     elif args.search:
         results = search_tweets(args.search, args.limit, args.project_dir)
-        print(f"\n🔍 Search Results for '{args.search}' ({len(results)} tweets):\n")
+        print(f"\n[SCAN] Search Results for '{args.search}' ({len(results)} tweets):\n")
         for idx, tweet in enumerate(results):
             print(f"{idx+1}. [{tweet['author']}] ({tweet['timestamp']})")
             print(f"   Text: {tweet['text']}")
@@ -332,7 +332,7 @@ def main():
             out_file.parent.mkdir(parents=True, exist_ok=True)
             with open(out_file, "w", encoding="utf-8") as f:
                 json.dump(results, f, indent=2, ensure_ascii=False)
-            print(f"💾 Saved JSON results to: {out_file}")
+            print(f"[SAVE] Saved JSON results to: {out_file}")
 
 
 if __name__ == "__main__":

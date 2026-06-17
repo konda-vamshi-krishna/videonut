@@ -71,14 +71,14 @@ def read_webpage(url, project_path=None):
     # 1. Try Trafilatura first
     if has_trafilatura:
         try:
-            print("🕷️ Crawling webpage with Trafilatura...")
+            print("[CRAWL] Crawling webpage with Trafilatura...")
             downloaded = trafilatura.fetch_url(url)
             if downloaded:
                 # Extract text with metadata and basic formatting preserved
                 clean_text = trafilatura.extract(downloaded, include_links=True, include_images=False)
                 if clean_text:
                     engine_used = "trafilatura"
-                    print("✅ Clean text extracted successfully via Trafilatura")
+                    print("[OK] Clean text extracted successfully via Trafilatura")
                 else:
                     print("⚠️ Trafilatura returned empty content. Trying Playwright fallback...")
             else:
@@ -87,12 +87,12 @@ def read_webpage(url, project_path=None):
             print(f"⚠️ Trafilatura error: {e}. Trying Playwright fallback...")
             error_msg += f"Trafilatura error: {e}. "
     else:
-        print("ℹ️ Trafilatura is not installed. Using Playwright directly...")
+        print("[INFO] Trafilatura is not installed. Using Playwright directly...")
 
     # 2. Playwright Fallback if Trafilatura failed or is missing
     if not clean_text:
         try:
-            print("🌐 Launching Playwright headless browser fallback...")
+            print("[BROWSER] Launching Playwright headless browser fallback...")
             from playwright.sync_api import sync_playwright
             
             with sync_playwright() as p:
@@ -119,11 +119,11 @@ def read_webpage(url, project_path=None):
                 
                 if clean_text:
                     engine_used = "playwright-fallback"
-                    print("✅ Text content extracted successfully via Playwright browser")
+                    print("[OK] Text content extracted successfully via Playwright browser")
                 else:
                     raise ValueError("Playwright returned empty page content")
         except Exception as e:
-            print(f"❌ Playwright fallback failed: {e}")
+            print(f"[FAIL] Playwright fallback failed: {e}")
             error_msg += f"Playwright error: {e}."
             log_action_to_audit(
                 project_path,

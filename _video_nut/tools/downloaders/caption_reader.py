@@ -225,7 +225,7 @@ def get_youtube_captions(url, languages=None, with_timestamps=False, search_term
     try:
         transcript_data = _fetch_with_retry(video_id, languages=languages)
         fetched_via = "youtube-transcript-api"
-        print("✅ Transcript retrieved successfully via YouTube API")
+        print("[OK] Transcript retrieved successfully via YouTube API")
     except Exception as e:
         print(f"⚠️ API transcript fetch failed: {e}. Attempting local Whisper transcription fallback...", file=sys.stderr)
         error_details += f"API failed: {e}. "
@@ -235,9 +235,9 @@ def get_youtube_captions(url, languages=None, with_timestamps=False, search_term
         try:
             transcript_data = fetch_captions_via_transcription(video_id)
             fetched_via = "local-whisper-fallback"
-            print("✅ Local transcription fallback succeeded")
+            print("[OK] Local transcription fallback succeeded")
         except Exception as e:
-            print(f"❌ Local transcription fallback failed: {e}", file=sys.stderr)
+            print(f"[FAIL] Local transcription fallback failed: {e}", file=sys.stderr)
             error_details += f"Local Whisper failed: {e}."
             log_action_to_audit(
                 project_dir,
@@ -275,7 +275,7 @@ def get_youtube_captions(url, languages=None, with_timestamps=False, search_term
             )
             return f"No matches found for '{search_term}' in transcript."
         
-        output = [f"\n🔍 Found {len(matches)} matches for '{search_term}':\n"]
+        output = [f"\n[SCAN] Found {len(matches)} matches for '{search_term}':\n"]
         for match in matches:
             output.append(f"[{match['timestamp']}] {match['text']}")
         output.append(f"\n📋 Suggested clip range: {matches[0]['timestamp']} - {matches[-1]['end_timestamp']}")
@@ -432,17 +432,17 @@ Examples:
             print(json.dumps(result, indent=2, ensure_ascii=False))
         else:
             if result.get('found'):
-                print(f"\n✅ Quote Found!")
+                print(f"\n[OK] Quote Found!")
                 print(f"   Timestamp: {result['timestamp']}")
                 print(f"   Text: {result['quote']}")
-                print(f"\n🎬 Suggested Clip:")
+                print(f"\n[WORKFLOW] Suggested Clip:")
                 print(f"   Start: {result['clip_start']}")
                 print(f"   End: {result['clip_end']}")
-                print(f"\n📄 Context:")
+                print(f"\n[DOC] Context:")
                 for entry in result['context']:
                     print(f"   [{entry['timestamp']}] {entry['text']}")
             else:
-                print(f"❌ {result.get('message', 'Quote not found')}")
+                print(f"[FAIL] {result.get('message', 'Quote not found')}")
     else:
         captions = get_youtube_captions(
             args.url, 

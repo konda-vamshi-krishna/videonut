@@ -81,14 +81,14 @@ def main():
         
     project_path = sys.argv[1]
     if not os.path.exists(project_path):
-        print(f"❌ Project path '{project_path}' does not exist.")
+        print(f"[FAIL] Project path '{project_path}' does not exist.")
         sys.exit(1)
         
     stale = detect_stale_stages(project_path)
     
     print("📋 Stale Stages Report:")
     for stage, is_stale in stale.items():
-        status = "⚠️  STALE (needs re-run)" if is_stale else "✅ Up-to-date"
+        status = "⚠️  STALE (needs re-run)" if is_stale else "[OK] Up-to-date"
         print(f"  - {stage}: {status}")
         
     # Output JSON representation for orchestrator parsing
