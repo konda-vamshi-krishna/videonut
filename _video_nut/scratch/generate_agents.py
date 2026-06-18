@@ -208,7 +208,7 @@ allow_websearch = true
     opencode_manifest_path = os.path.join(workspace_root, ".opencode.json")
     opencode_manifest = {
         "project": "videonut",
-        "version": "1.3.8",
+        "version": "1.3.9",
         "agent_dir": ".opencode/agents",
         "permissions": [
             "bash",
