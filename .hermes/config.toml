@@ -1,0 +1,7 @@
+# Nous Research Hermes Agents Configuration
+[agent]
+name = "hermes-videonut"
+model = "nousresearch/hermes-3-llama-3.1-405b"
+
+[sandbox]
+permissions = ["terminal", "fs-read", "fs-write", "web"]

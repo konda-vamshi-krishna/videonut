@@ -2,6 +2,7 @@
 import os
 import re
 import sys
+import json
 
 # Ensure UTF-8 output encoding for terminal safety
 if hasattr(sys.stdout, 'reconfigure'):
@@ -20,10 +21,15 @@ def main():
     
     agents_dir = os.path.join(video_nut_dir, "agents")
     
+    # Target configurations paths
     dest_claude = os.path.join(workspace_root, ".claude", "commands")
+    dest_claude_skills = os.path.join(workspace_root, ".claude", "skills")
     dest_qwen = os.path.join(workspace_root, ".qwen", "commands")
     dest_opencode = os.path.join(workspace_root, ".opencode", "agents")
     dest_gemini = os.path.join(workspace_root, ".gemini", "commands")
+    dest_codex = os.path.join(workspace_root, ".codex")
+    dest_hermes = os.path.join(workspace_root, ".hermes")
+    dest_hermes_skills = os.path.join(dest_hermes, "skills")
     
     # Verify sources exist
     if not os.path.exists(agents_dir):
@@ -48,10 +54,23 @@ def main():
         "technical/scavenger.md": "scavenger"
     }
     
-    # Ensure destination directories exist
-    for d in [dest_claude, dest_qwen, dest_opencode, dest_gemini]:
+    # Ensure all target folders exist
+    target_folders = [
+        dest_claude,
+        dest_claude_skills,
+        dest_qwen,
+        dest_opencode,
+        dest_gemini,
+        dest_codex,
+        dest_hermes,
+        dest_hermes_skills
+    ]
+    for d in target_folders:
         os.makedirs(d, exist_ok=True)
         
+    # We will accumulate agents content for the Codex multi-agent prompt file
+    codex_agents_content = []
+    
     compiled_count = 0
     
     for rel_path, mapped_name in agent_mappings.items():
@@ -83,19 +102,28 @@ def main():
             
         source_description = metadata.get("description", f"VideoNut Agent: {mapped_name}")
         
-        # Write Claude Command
+        # Add to Codex agents document accumulator
+        codex_agents_content.append(f"# Agent: {mapped_name}\n> {source_description}\n\n{body}\n\n---\n")
+        
+        # 1. Write Claude Command (Legacy)
         claude_path = os.path.join(dest_claude, f"{mapped_name}.md")
         with open(claude_path, "w", encoding="utf-8") as f:
             f.write(body + "\n")
             
-        # Write Qwen Command
+        # 2. Write Claude Skill (Modern)
+        claude_skill_dir = os.path.join(dest_claude_skills, mapped_name)
+        os.makedirs(claude_skill_dir, exist_ok=True)
+        claude_skill_path = os.path.join(claude_skill_dir, "SKILL.md")
+        with open(claude_skill_path, "w", encoding="utf-8") as f:
+            f.write(body + "\n")
+            
+        # 3. Write Qwen Command
         qwen_path = os.path.join(dest_qwen, f"{mapped_name}.md")
         with open(qwen_path, "w", encoding="utf-8") as f:
             f.write(body + "\n")
             
-        # Write OpenCode Agent with frontmatter preservation
+        # 4. Write OpenCode Agent with frontmatter preservation
         opencode_path = os.path.join(dest_opencode, f"{mapped_name}.md")
-        
         fallback_opencode_fm = f"""---
 description: "VideoNut Agent: {mapped_name} - {source_description}"
 mode: "primary"
@@ -107,7 +135,6 @@ permissions:
   - websearch
 ---
 """
-        # Read existing frontmatter if possible
         opencode_fm = fallback_opencode_fm
         if os.path.exists(opencode_path):
             with open(opencode_path, "r", encoding="utf-8") as f:
@@ -119,9 +146,13 @@ permissions:
         with open(opencode_path, "w", encoding="utf-8") as f:
             f.write(opencode_fm + body + "\n")
             
-        # Write Gemini TOML Command with description preservation
+        # 5. Write Hermes Skill
+        hermes_skill_path = os.path.join(dest_hermes_skills, f"{mapped_name}.md")
+        with open(hermes_skill_path, "w", encoding="utf-8") as f:
+            f.write(body + "\n")
+            
+        # 6. Write Gemini TOML Command with description preservation
         gemini_path = os.path.join(dest_gemini, f"{mapped_name}.toml")
-        
         fallback_toml_desc = source_description
         toml_desc = fallback_toml_desc
         if os.path.exists(gemini_path):
@@ -135,7 +166,6 @@ permissions:
                 pass
                 
         # Escape triple quotes and backslashes in multi-line TOML strings
-        # Double backslashes in prompt string to avoid escaping issues in TOML
         escaped_body = body.replace('\\', '\\\\').replace('"""', '\\"\\"\\"')
         gemini_toml_content = f'description = "{toml_desc}"\nprompt = """\n{escaped_body}\n"""\n'
         with open(gemini_path, "w", encoding="utf-8") as f:
@@ -145,7 +175,72 @@ permissions:
         compiled_count += 1
         
     print("----------------------------------------------------")
-    print(f"🎉 Done! Successfully compiled/synced {compiled_count} agents.")
+    print("Generating Desktop Manifests & Configurations...")
+    
+    # 7. Write Codex agents library
+    codex_agents_path = os.path.join(dest_codex, "AGENTS.md")
+    with open(codex_agents_path, "w", encoding="utf-8") as f:
+        f.write("# VideoNut Agent Persona Library\n\n" + "\n".join(codex_agents_content))
+    print("  ├─ ✅ Generated .codex/AGENTS.md")
+    
+    # 8. Write Codex project config (if missing)
+    codex_config_path = os.path.join(dest_codex, "config.toml")
+    if not os.path.exists(codex_config_path):
+        codex_config = """# OpenAI Codex Desktop App Project Configuration
+[project]
+name = "videonut"
+trusted = true
+default_model = "gpt-4o"
+
+[sandbox]
+allow_bash = true
+allow_read = true
+allow_edit = true
+allow_websearch = true
+"""
+        with open(codex_config_path, "w", encoding="utf-8") as f:
+            f.write(codex_config)
+        print("  ├─ ✅ Generated default .codex/config.toml")
+    else:
+        print("  ├─ ℹ️  Preserved existing .codex/config.toml")
+        
+    # 9. Write OpenCode Desktop manifest
+    opencode_manifest_path = os.path.join(workspace_root, ".opencode.json")
+    opencode_manifest = {
+        "project": "videonut",
+        "version": "1.3.8",
+        "agent_dir": ".opencode/agents",
+        "permissions": [
+            "bash",
+            "read",
+            "edit",
+            "websearch"
+        ],
+        "default_model": "anthropic/claude-3.5-sonnet"
+    }
+    with open(opencode_manifest_path, "w", encoding="utf-8") as f:
+        json.dump(opencode_manifest, f, indent=2)
+    print("  ├─ ✅ Generated .opencode.json manifest")
+    
+    # 10. Write Hermes configuration (if missing)
+    hermes_config_path = os.path.join(dest_hermes, "config.toml")
+    if not os.path.exists(hermes_config_path):
+        hermes_config = """# Nous Research Hermes Agents Configuration
+[agent]
+name = "hermes-videonut"
+model = "nousresearch/hermes-3-llama-3.1-405b"
+
+[sandbox]
+permissions = ["terminal", "fs-read", "fs-write", "web"]
+"""
+        with open(hermes_config_path, "w", encoding="utf-8") as f:
+            f.write(hermes_config)
+        print("  └─ ✅ Generated default .hermes/config.toml")
+    else:
+        print("  └─ ℹ️  Preserved existing .hermes/config.toml")
+        
+    print("----------------------------------------------------")
+    print(f"🎉 Done! Successfully compiled/synced {compiled_count} agents to all CLIs and Desktop apps.")
     print("====================================================")
 
 if __name__ == "__main__":
