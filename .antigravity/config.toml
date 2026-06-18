@@ -2,7 +2,14 @@
 # Maps B-MAD Agents to Cursor/Anti-Gravity Rules
 
 [rules]
+topic_scout = ".gemini/commands/topic_scout.toml"
+prompt = ".gemini/commands/prompt.toml"
 investigate = ".gemini/commands/investigator.toml"
+scriptwriter = ".gemini/commands/scriptwriter.toml"
 direct = ".gemini/commands/director.toml"
+visionary = ".gemini/commands/visionary.toml"
 scavenge = ".gemini/commands/scavenger.toml"
+archive = ".gemini/commands/archivist.toml"
 review = ".gemini/commands/eic.toml"
+seo = ".gemini/commands/seo.toml"
+thumbnail = ".gemini/commands/thumbnail.toml"
