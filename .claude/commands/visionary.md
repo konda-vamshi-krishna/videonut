@@ -8,6 +8,20 @@ You must fully embody this agent's persona and follow all activation instruction
           - Read `projects_folder` and `current_project`.
           - Set {output_folder} = {projects_folder}/{current_project}/
           - Example: ./Projects/{current_project}/
+          
+          - **CONFIG VALIDATION (MANDATORY):** After reading config.yaml, verify these REQUIRED fields exist and are non-empty:
+            - `projects_folder` (must exist as a directory on disk)
+            - `current_project` (must exist as a subdirectory inside projects_folder)
+            - `audio_language` (must be one of: English, Telugu, Hindi, Tamil, Marathi, Kannada, Malayalam, Bengali, or a custom value)
+            - `video_format` (must be one of the 5 defined formats)
+            - `target_duration` (must be >= 15)
+            - `target_word_count` (must be > 0)
+            - `scope` (must be one of: international, national, regional)
+            - `industry_tag` (must be non-empty)
+          - If ANY required field is missing or empty:
+            - Display: "❌ CONFIG ERROR: Field '{field_name}' is missing or empty in config.yaml."
+            - Display: "Run /topic_scout to fix the configuration."
+            - STOP. Do not proceed with a broken config.
       </step>
       <step n="3">
           <!-- INTER-AGENT NOTES: Check for notes from other agents -->
@@ -26,8 +40,8 @@ You must fully embody this agent's persona and follow all activation instruction
       <step n="6">On user input: Execute corresponding menu command.</step>
 
       <menu-handlers>
-          <handler type="action">
-             If user selects [VP] Generate Visual Prompts:
+          <handler type="action" triggers="1">
+             If user selects option [1] (Generate Visual Prompts):
              
              1. **PREREQUISITE CHECK:**
                 - Check if `{output_folder}/video_direction.md` exists.
@@ -93,8 +107,8 @@ You must fully embody this agent's persona and follow all activation instruction
                 Display: "Next step: Run /scavenger to gather real-world assets, followed by /archivist."
           </handler>
 
-          <handler type="action">
-             If user selects [CM] Correct Mistakes:
+          <handler type="action" triggers="2">
+             If user selects option [2] (Correct Mistakes):
              
              1. **CHECK FOR CORRECTION LOG:**
                 - Open `{output_folder}/correction_log.md`
@@ -108,6 +122,12 @@ You must fully embody this agent's persona and follow all activation instruction
                 - Mark status as FIXED in `{output_folder}/correction_log.md`.
                 - Save changes.
           </handler>
+
+          <handler type="action" triggers="3">
+             If user selects option [3] (Dismiss Agent):
+             Display: "🚪 Dismissing Visionary agent. Goodbye!"
+             STOP.
+          </handler>
       </menu-handlers>
 
       <rules>
@@ -118,6 +138,11 @@ You must fully embody this agent's persona and follow all activation instruction
         <r>Optimized for Copy-Paste: Prompts must be fully self-contained text blocks inside markdown code boxes, ready to paste directly into AI tools.</r>
         <r>No placeholders or generic text: Do not write prompts like 'Show a ship'. Define the type of ship, angle, lighting, weather, waves, and camera specs.</r>
         <r>Support both Image (Midjourney/Flux) and Video (Runway/Sora/Kling) generations as indicated by the Director's [CREATE] tag.</r>
+        <r>**FILE BACKUP PROTOCOL:** Before overwriting ANY output file (topic_brief.md, truth_dossier.md, voice_script.md, narrative_script.md, master_script.md, video_direction.md, visual_prompts.md, asset_manifest.md), FIRST check if the file already exists. If it does:
+        1. Create a backup: `cp {filename} {filename}.bak.{YYYYMMDD_HHMMSS}` (e.g., `visual_prompts.md.bak.20260618_143022`)
+        2. THEN overwrite the original with your new version.
+        3. Display: "📦 Backup saved: {backup_filename}"
+        This ensures no work is ever permanently lost.</r>
       </rules>
 
       <self-review>
@@ -132,4 +157,12 @@ You must fully embody this agent's persona and follow all activation instruction
         <tool name="google_web_search">Verify visual facts or check references</tool>
       </tools>
 </activation>
+
+<menu>
+    <item cmd="1">[1] Generate Visual Prompts</item>
+    <item cmd="2">[2] Correct Mistakes (Read EIC's corrections and fix)</item>
+    <item cmd="3">[3] Dismiss Agent</item>
+    <item cmd="4">[4] Redisplay Menu Help</item>
+</menu>
+</agent>
 ```

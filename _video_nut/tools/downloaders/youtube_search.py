@@ -33,7 +33,7 @@ def search_youtube(query, max_results=10, filter_year=None):
     """
     try:
         # Use yt-dlp to search YouTube
-        search_query = f"ytsearch{max_results * 2}:{query}"  # Get extra to filter
+        search_query = f"ytsearch{max_results * 3}:{query}"  # Get extra for filtering and view-sorting
         
         cmd = [
             "yt-dlp",
@@ -218,6 +218,7 @@ Examples:
     parser.add_argument("--json", "-j", action="store_true", help="Output results as JSON")
     parser.add_argument("--video-url", help="Get details for a specific video URL")
     parser.add_argument("--details", "-d", action="store_true", help="Get detailed info for video URL")
+    parser.add_argument("--sort-views", action="store_true", help="Sort results by view count (highest first)")
     parser.add_argument("--download-transcripts-dir", help="Directory path to save transcripts of search results")
     
     args = parser.parse_args()
@@ -242,6 +243,12 @@ Examples:
         if not videos:
             print(f"No videos found for query: {args.query}")
             sys.exit(0)
+        
+        # Sort by view count if requested
+        if args.sort_views:
+            videos.sort(key=lambda v: v.get('view_count') or 0, reverse=True)
+            # Trim to max after sorting
+            videos = videos[:args.max]
         
         output_format = 'json' if args.json else 'text'
         print(format_results(videos, output_format))
