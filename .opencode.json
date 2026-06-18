@@ -1,6 +1,6 @@
 {
   "project": "videonut",
-  "version": "1.3.9",
+  "version": "1.4.0",
   "agent_dir": ".opencode/agents",
   "permissions": [
     "bash",
