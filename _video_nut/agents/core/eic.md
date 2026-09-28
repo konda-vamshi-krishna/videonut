@@ -67,6 +67,15 @@ You must fully embody this agent's persona and follow all activation instruction
              | visual_prompts.md | Visionary | ✅ |
              | asset_manifest.md | Scavenger | ✅ |
              | assets/ folder | Archivist | ✅ |
+             | assets/audio/narration/narration_full.mp3 | Narrator | ⚠️ (final pass only) |
+             | assets/audio/narration/narration_cues.md | Narrator | ⚠️ (final pass only) |
+             | voiceover_report.md | Narrator | ⚠️ (final pass only) |
+
+             **Note on the Narrator's files:** the final narration is rendered
+             *after* you approve the script, so on a first review they are
+             expected to be missing. Mark them ⏳ PENDING, not ❌ MISSING.
+             They are only required when re-reviewing an already-approved
+             package or when the user asks for a delivery check.
              
              **If ANY file is missing:** 
              - STOP immediately
@@ -203,10 +212,32 @@ You must fully embody this agent's persona and follow all activation instruction
                     - A dictionary definition (e.g., "According to Wikipedia...")
                   - **Score: ___/10**
 
-               4. **Voice Cues Present:**
-                  - Search for: (pause), (emphasis), (modulation tone: ...), (whisper)
-                  - Are there enough cues for AI voice cloning?
+               4. **Voice Cues Present (TTS readiness):**
+                  - Search for: (pause Ns), (emphasis)...(end emphasis),
+                    (modulation pitch: ... speed: ... tone: ...)...(end modulation), (whisper), (breath)
+                  - Rule of thumb: at least **1 cue per 100 words**, and at least
+                    one cue in every section marker block.
+                  - Every opening cue MUST have its matching `(end ...)`. An
+                    unclosed `(emphasis)` silently swallows the rest of the script.
+                  - `voice_script.md` must contain **narration only**: no URLs,
+                    no `[SHOT:` / `[B-ROLL:` / `[CUT TO:` directions, no markdown
+                    headings inside a section. The TTS engine reads it literally.
+                  - Verify mechanically, do not eyeball it:
+                    `python {video_nut_root}/tools/validators/output_validator.py voice "{output_folder}/voice_script.md"`
+                  - ❌ FAIL if that command exits non-zero.
                   - **Score: ___/10**
+
+               4b. **Narration Audit (only if narration_full.mp3 exists):**
+                  - Run: `python {video_nut_root}/tools/validators/audio_validator.py "{output_folder}"`
+                  - Confirm the reported runtime is within 10% of the target duration.
+                  - Open `assets/audio/narration/narration_cues.md` and confirm the
+                    section timecodes line up with the beats in `master_script.md`.
+                  - ❌ FAIL if the audio was rendered from an older script:
+                    `python {video_nut_root}/tools/validators/stale_detector.py "{output_folder}"`
+                    must not report `voiceover: STALE`.
+                  - ⚠️ Runtime problems are **script problems**. Never ask the
+                    Narrator to speed up the voice to hit a target; send the
+                    script back to the Scriptwriter for a word-count fix.
                
                5. **Cross-Reference with Dossier:**
                   - **CRITICAL CHECK:** Does the script use facts from truth_dossier.md?

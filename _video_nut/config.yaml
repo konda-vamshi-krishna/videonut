@@ -50,6 +50,52 @@ industry_tag: ""
 # Social Awareness: NGO reports, Government schemes, RTI data
 
 # ═══════════════════════════════════════════════════════════════════
+# VOICE / NARRATION (Used by the Narrator agent + tools/audio/tts_engine.py)
+# ═══════════════════════════════════════════════════════════════════
+# ⚠️  NEVER put API keys in this file - it is committed to git.
+#     Keys go in .env at the repo root (see .env.example). The engine loads them
+#     automatically: ELEVENLABS_API_KEY / SARVAM_API_KEY / GEMINI_API_KEY / OPENAI_API_KEY
+voice:
+  enabled: true
+
+  # provider: auto | elevenlabs | sarvam | gemini | openai | piper | edge | mock
+  #   auto  -> routes by audio_language: Indic -> sarvam, otherwise elevenlabs,
+  #            then falls back down the chain to whatever actually has a key.
+  provider: "auto"
+
+  # Cheap/local backend for the draft timing pass (no spend, no keys needed).
+  draft_provider: "auto"
+
+  # Leave blank to use each provider's VideoNut default voice.
+  #   elevenlabs -> voice_id from your ElevenLabs library
+  #   sarvam     -> speaker name (shubh, anushka, priya, ...)
+  #   gemini     -> prebuilt voice name (Charon, Kore, Puck, ...)
+  #   openai     -> onyx | alloy | nova | ...
+  voice: ""
+  model: ""
+
+  # Delivery
+  pace: 1.0              # 0.5 - 2.0
+  stability: 0.45        # ElevenLabs: lower = more expressive, higher = more consistent
+  similarity: 0.8
+  style_prompt: "Authoritative investigative documentary narrator. Measured, credible, never theatrical."
+
+  # Output
+  output_format: "mp3"   # mp3 | wav
+  sample_rate: 44100
+  normalize_loudness: true
+  loudness_lufs: -14.0   # YouTube normalises to roughly -14 LUFS
+
+  # Engine behaviour
+  max_chars_per_request: 0   # 0 = use each provider's own safe cap
+  concurrency: 3
+  retries: 3
+  cache: true                # content-hash cache: never pay twice for the same sentence
+  draft_pass: true           # run a free draft render after scriptwriting for real timings
+  cost_ceiling_usd: 25.0     # hard stop before an accidental expensive render
+  fallback_chain: []         # e.g. ["sarvam", "elevenlabs", "edge", "mock"]
+
+# ═══════════════════════════════════════════════════════════════════
 # EIC CORRECTION TRACKING (Set by EIC after review)
 # ═══════════════════════════════════════════════════════════════════
 # correction_log: Path to the correction log file (relative to project folder)

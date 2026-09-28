@@ -21,3 +21,17 @@ gh.zip
 # IDE/Tool configs
 .aider.chat.history.md
 .aider.input.history
+
+# Python bytecode (these were tracked by mistake before v1.5)
+__pycache__/
+*.py[cod]
+
+# Secrets - API keys for TTS/LLM providers live here and must never be committed
+.env
+.env.local
+_video_nut/.env
+
+# TTS render cache (regenerable, can reach hundreds of MB)
+.tts_cache/
+Projects/*/.tts_cache/
+Projects/*/assets/audio/

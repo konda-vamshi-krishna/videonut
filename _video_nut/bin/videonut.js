@@ -202,20 +202,44 @@ async function runInit() {
 
     const packageRoot = path.join(__dirname, '..');
 
-    // Copy CLI command folders to target root
-    const cliFolders = ['.gemini', '.qwen', '.claude', '.opencode', '.antigravity'];
+    // Copy CLI command folders to target root.
+    //
+    // These folders are staged into the package by scripts/prepack.js. If that
+    // hook did not run, they are simply absent and every copy below is a no-op -
+    // which is exactly how v1.4.0 shipped a tarball with zero agent commands and
+    // said "Installation complete". Count what actually landed and refuse to
+    // report success on an empty install.
+    const cliFolders = ['.gemini', '.qwen', '.claude', '.opencode', '.antigravity', '.hermes', '.codex'];
+    let cliFoldersCopied = 0;
     for (const folder of cliFolders) {
         const src = path.join(packageRoot, folder);
         const dest = path.join(targetDir, folder);
 
         if (existsSync(src)) {
             copyDir(src, dest);
+            cliFoldersCopied++;
             success(`Copied ${folder}/`);
         }
     }
 
+    if (cliFoldersCopied === 0) {
+        console.log('');
+        error('No AI CLI command folders were found inside the videonut package.');
+        error('Your install would have no slash commands (/investigator, /narrator, ...).');
+        console.log('');
+        console.log('  This means the package was published without running its prepack step.');
+        console.log('  Please report it at:');
+        console.log('    https://github.com/konda-vamshi-krishna/videonut/issues');
+        console.log('');
+        console.log('  Workaround - clone the repo and run the installer from source:');
+        console.log('    git clone https://github.com/konda-vamshi-krishna/videonut.git');
+        console.log('    node videonut/_video_nut/bin/videonut.js init');
+        console.log('');
+        process.exit(1);
+    }
+
     // Copy IDE configuration/rules files to target root
-    const rootFiles = ['.cursorrules', '.clinerules', '.aider.conf.yml', 'CONVENTIONS.md', 'README_AGENTS.md'];
+    const rootFiles = ['.cursorrules', '.clinerules', '.aider.conf.yml', 'CONVENTIONS.md', 'README_AGENTS.md', '.env.example'];
     for (const file of rootFiles) {
         const src = path.join(packageRoot, file);
         const dest = path.join(targetDir, file);

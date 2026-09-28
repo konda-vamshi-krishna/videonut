@@ -12,6 +12,7 @@ if hasattr(sys.stderr, 'reconfigure'):
 STAGE_ORDER = [
     "investigation",
     "scriptwriting",
+    "voiceover",
     "direction",
     "scavenging",
     "visionary",
@@ -21,6 +22,8 @@ STAGE_ORDER = [
 AGENT_TO_STAGE = {
     "investigator": "investigation",
     "scriptwriter": "scriptwriting",
+    "narrator": "voiceover",
+    "voiceover": "voiceover",
     "director": "direction",
     "scavenger": "scavenging",
     "visionary": "visionary",
@@ -94,6 +97,7 @@ def apply_rework_checkpoints(project_path, fail_stage):
     stage_to_key = {
         "investigation": "investigation_complete",
         "scriptwriting": "scriptwriting_complete",
+        "voiceover": "voiceover_draft_complete",
         "direction": "direction_complete",
         "scavenging": "scavenging_complete",
         "visionary": "visionary_complete",
@@ -108,6 +112,14 @@ def apply_rework_checkpoints(project_path, fail_stage):
             checkpoints[key] = False
             print(f"  - Set {key} = False")
             
+    # A rework at or above the script level invalidates any narration already
+    # rendered from that script - otherwise the pipeline ships audio of the old text.
+    if fail_stage in ("investigation", "scriptwriting", "voiceover"):
+        for key in ("voiceover_draft_complete", "voiceover_final_complete"):
+            if key in checkpoints and checkpoints[key]:
+                checkpoints[key] = False
+                print(f"  - Set {key} = False (script changed, narration is stale)")
+
     # Update last_step to the step before the failure
     if fail_idx > 0:
         checkpoints["last_step"] = STAGE_ORDER[fail_idx - 1]

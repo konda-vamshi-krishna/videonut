@@ -1,26 +1,41 @@
 # VideoNut Workspace Rules & Agent Roster
 
-You are working in a VideoNut project workspace. This project uses a pipeline of 11 specialized agents to create YouTube documentaries.
+You are working in a VideoNut project workspace. This project uses a pipeline of 12 specialized agents to create YouTube documentaries.
 
-## 📁 Repository Structure & Persons
-The core agent personas, rules, and workflows are located in the `_video_nut/agents/` directory:
+## 📁 Repository Structure & Personas
+The core agent personas, rules, and workflows live in the `_video_nut/agents/` directory.
+Paths below are **relative to the workspace root** - open them with your editor's
+workspace-relative file tools, not an absolute path.
+
 - **Research Team:**
-  - `investigator`: [_video_nut/agents/research/investigator.md](file:///g:/youtuber/work_space/AI%20_TEAM/_video_nut/agents/research/investigator.md)
-  - `topic_scout`: [_video_nut/agents/research/topic_scout.md](file:///g:/youtuber/work_space/AI%20_TEAM/_video_nut/agents/research/topic_scout.md)
+  - `investigator`: `_video_nut/agents/research/investigator.md`
+  - `topic_scout`: `_video_nut/agents/research/topic_scout.md`
 - **Creative Team:**
-  - `director`: [_video_nut/agents/creative/director.md](file:///g:/youtuber/work_space/AI%20_TEAM/_video_nut/agents/creative/director.md)
-  - `scriptwriter`: [_video_nut/agents/creative/scriptwriter.md](file:///g:/youtuber/work_space/AI%20_TEAM/_video_nut/agents/creative/scriptwriter.md)
-  - `seo`: [_video_nut/agents/creative/seo.md](file:///g:/youtuber/work_space/AI%20_TEAM/_video_nut/agents/creative/seo.md)
-  - `thumbnail`: [_video_nut/agents/creative/thumbnail.md](file:///g:/youtuber/work_space/AI%20_TEAM/_video_nut/agents/creative/thumbnail.md)
-  - `visionary`: [_video_nut/agents/creative/visionary.md](file:///g:/youtuber/work_space/AI%20_TEAM/_video_nut/agents/creative/visionary.md)
+  - `scriptwriter`: `_video_nut/agents/creative/scriptwriter.md`
+  - `narrator`: `_video_nut/agents/creative/narrator.md`
+  - `director`: `_video_nut/agents/creative/director.md`
+  - `visionary`: `_video_nut/agents/creative/visionary.md`
+  - `seo`: `_video_nut/agents/creative/seo.md`
+  - `thumbnail`: `_video_nut/agents/creative/thumbnail.md`
 - **Technical/Core Team:**
-  - `eic`: [_video_nut/agents/core/eic.md](file:///g:/youtuber/work_space/AI%20_TEAM/_video_nut/agents/core/eic.md)
-  - `prompt_agent`: [_video_nut/agents/core/prompt_agent.md](file:///g:/youtuber/work_space/AI%20_TEAM/_video_nut/agents/core/prompt_agent.md)
-  - `archivist`: [_video_nut/agents/technical/archivist.md](file:///g:/youtuber/work_space/AI%20_TEAM/_video_nut/agents/technical/archivist.md)
-  - `scavenger`: [_video_nut/agents/technical/scavenger.md](file:///g:/youtuber/work_space/AI%20_TEAM/_video_nut/agents/technical/scavenger.md)
+  - `eic`: `_video_nut/agents/core/eic.md`
+  - `prompt_agent`: `_video_nut/agents/core/prompt_agent.md`
+  - `archivist`: `_video_nut/agents/technical/archivist.md`
+  - `scavenger`: `_video_nut/agents/technical/scavenger.md`
+
+## 🎬 Pipeline Order
+`topic_scout` -> `investigator` -> `scriptwriter` -> **`narrator` (draft VO)** ->
+`director` -> `visionary` + `scavenger` (parallel) -> `archivist` -> `eic` ->
+**`narrator` (final VO)** -> `seo` + `thumbnail`
 
 ## 🤖 Operational Protocol
-If the user asks you to act as one of these agents or to run their specific phase (e.g. "Write the script as the Scriptwriter"), you must:
+If the user asks you to act as one of these agents or to run their specific phase
+(e.g. "Write the script as the Scriptwriter"), you must:
 1. Open and load the corresponding persona file from `_video_nut/agents/`.
 2. Fully adopt that agent's XML behavior instructions, templates, and menu commands.
-3. Keep character and follow the output guidelines specified inside that file.
+3. Stay in character and follow the output guidelines specified inside that file.
+
+## 💸 Spend Protocol (Narrator only)
+The Narrator is the only agent that can spend money (text-to-speech API calls).
+It must ALWAYS print a character count and cost estimate and wait for an explicit
+"yes" before synthesizing. API keys live in `.env` only - never in `config.yaml`.

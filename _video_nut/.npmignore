@@ -1,0 +1,22 @@
+# ---------------------------------------------------------------------------
+# Excluded from the published npm tarball.
+#
+# package.json `files[]` whitelists whole directories (tools/, agents/, ...),
+# so without this file every stray build artifact inside them gets published.
+# v1.4.0 shipped 11 compiled .pyc files this way.
+# ---------------------------------------------------------------------------
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+
+# Maintainer-only tooling (the agent compiler, not needed by end users)
+scratch/
+
+# Secrets - only .env.example ships
+.env
+.env.local
+
+# Local test/render artifacts
+.tts_cache/
+*.log

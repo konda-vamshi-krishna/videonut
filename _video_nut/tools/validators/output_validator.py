@@ -117,10 +117,126 @@ def validate_manifest(manifest_path):
         
     return True, f"Valid asset manifest (found {len(urls)} verified URLs)"
 
+def validate_voice_script(script_path):
+    """
+    Validates voice_script.md - the file the Narrator/TTS stage consumes.
+
+    Deliberately stricter than validate_script(): once text reaches a TTS API,
+    every stray markdown table, URL or stage direction is either billed and read
+    aloud, or silently mangled. Catching it here is free.
+
+    Unlike the other validators this one reports EVERY problem it finds instead
+    of stopping at the first. A script with four issues should cost one round
+    trip to fix, not four.
+    """
+    if not os.path.exists(script_path):
+        return False, "File does not exist (Scriptwriter must emit voice_script.md)"
+
+    try:
+        with open(script_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+    except Exception as e:
+        return False, f"Could not read file: {str(e)}"
+
+    problems = []   # fatal - block the pipeline
+    warnings = []   # non-fatal - the engine copes, but the Scriptwriter should not do this
+    upper = content.upper()
+
+    # 1. Section markers drive the narration cue sheet.
+    markers = [m for m in ("[HOOK]", "[BRIDGE]", "[MEAT]", "[HUMAN BEAT]", "[VERDICT]", "[CTA]")
+               if m in upper]
+    if len(markers) < 2:
+        problems.append(
+            "Missing section markers - needs at least [HOOK] and one of "
+            "[MEAT]/[VERDICT]/[CTA] so narration can be mapped to timecodes."
+        )
+
+    # 2. Visual directions must NOT be in the voice script - they get narrated.
+    visual_hits = re.findall(
+        r'\[\s*(?:VISUAL|B-?ROLL|SHOT|CUT TO|SOURCE|ON SCREEN|GRAPHIC|TEXT ON SCREEN)\b[^\]]*\]',
+        content, re.IGNORECASE)
+    if visual_hits:
+        # The normalizer strips a handful safely, so a few are a warning. Past
+        # that the file is structurally a shot list, not a narration script,
+        # and the word count / runtime estimate can no longer be trusted.
+        message = (
+            f"{len(visual_hits)} visual direction(s) found (e.g. {visual_hits[0][:48]!r}). "
+            "voice_script.md is narration only. Visuals belong in "
+            "master_script.md / video_direction.md."
+        )
+        (problems if len(visual_hits) > 3 else warnings).append(message)
+
+    # 3. Raw URLs are unreadable by TTS.
+    urls = re.findall(r'https?://\S+', content)
+    if urls:
+        problems.append(
+            f"{len(urls)} raw URL(s) in the voice script (e.g. {urls[0][:50]}). "
+            "TTS spells them out character by character. Move citations to truth_dossier.md."
+        )
+
+    # 4. Unbalanced cue spans. An unclosed (emphasis) swallows the rest of the
+    #    script into one delivery style - the single most common cue bug.
+    for opener, closer in (("emphasis", "end emphasis"), ("modulation", "end modulation")):
+        n_open = len(re.findall(r'\(\s*%s\b' % opener, content, re.IGNORECASE))
+        n_close = len(re.findall(r'\(\s*%s\b' % closer, content, re.IGNORECASE))
+        if n_open != n_close:
+            problems.append(
+                f"Unbalanced ({opener}) cues: {n_open} opened, {n_close} closed. "
+                f"Every ({opener}) needs a matching ({closer})."
+            )
+
+    # 5. Voice cues make the difference between narration and a robot.
+    cues = re.findall(r'\((?:pause|emphasis|end emphasis|modulation|end modulation|breath|sigh|whisper)\b[^)]*\)',
+                      content, re.IGNORECASE)
+    word_count = len(re.sub(r'\(.*?\)|\[.*?\]', '', content).split())
+    if word_count > 400 and len(cues) < max(3, word_count // 200):
+        problems.append(
+            f"Only {len(cues)} voice cue(s) across {word_count} words. Aim for roughly one cue "
+            "per 100-200 words: (pause Ns), (emphasis)...(end emphasis), (modulation ...)."
+        )
+
+    # 6. Substance check - run last so a thin script still reports its real defects.
+    if word_count < 80:
+        problems.append(
+            f"Only {word_count} narratable words. This is too short to be a real "
+            "narration script (a 1-minute video needs roughly 150)."
+        )
+
+    suffix = "".join(f"\n     [WARN] {w}" for w in warnings)
+
+    if problems:
+        if len(problems) == 1:
+            return False, problems[0] + suffix
+        joined = "".join(f"\n     {i}. {p}" for i, p in enumerate(problems, 1))
+        return False, f"{len(problems)} problems in voice_script.md:{joined}{suffix}"
+
+    return True, (
+        f"Valid voice script ({word_count} words, {len(markers)} sections, "
+        f"{len(cues)} voice cues){suffix}"
+    )
+
+
+def validate_narration(project_path):
+    """Delegates to audio_validator for the generated-audio gate."""
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    try:
+        from audio_validator import validate_narration as _validate
+    except ImportError as exc:
+        return False, f"audio_validator.py is unavailable: {exc}"
+    result = _validate(project_path)
+    if result["passed"]:
+        summary = result.get("summary", {})
+        return True, (
+            f"Narration OK ({summary.get('duration_seconds', '?')}s via "
+            f"{summary.get('provider', '?')}, drift {summary.get('drift_pct', 'n/a')}%)"
+        )
+    return False, "; ".join(result["errors"]) or "narration validation failed"
+
+
 def main():
     if len(sys.argv) < 3:
-        print("Usage: python output_validator.py <type> <file_path>")
-        print("Types: dossier, script, manifest")
+        print("Usage: python output_validator.py <type> <file_path|project_path>")
+        print("Types: dossier, script, voice, manifest, narration")
         sys.exit(1)
         
     val_type = sys.argv[1].lower()
@@ -130,6 +246,10 @@ def main():
         success, msg = validate_dossier(file_path)
     elif val_type == "script":
         success, msg = validate_script(file_path)
+    elif val_type == "voice":
+        success, msg = validate_voice_script(file_path)
+    elif val_type == "narration":
+        success, msg = validate_narration(file_path)
     elif val_type == "manifest":
         success, msg = validate_manifest(file_path)
     else:

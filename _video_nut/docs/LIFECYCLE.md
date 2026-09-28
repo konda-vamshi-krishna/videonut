@@ -23,17 +23,30 @@
 ║   └─────────────┘     └─────────────┘     └─────────────┘     └─────────────┘║
 ║                                                                               ║
 ║   ┌─────────────┐     ┌─────────────┐     ┌─────────────┐     ┌─────────────┐║
-║   │ 🎬 DIRECTOR │────►│ 🦅 SCAVENGE │────►│ 💾 ARCHIVIST│────►│ 🧐 EIC      │║
-║   │             │     │     R       │     │             │     │             │║
+║   │ 🎙️ NARRATOR │────►│ 🎬 DIRECTOR │────►│ 🦅 SCAVENGE │────►│ 💾 ARCHIVIST│║
+║   │ (draft VO)  │     │             │     │     R       │     │             │║
 ║   └─────────────┘     └─────────────┘     └─────────────┘     └─────────────┘║
 ║          │                   │                   │                   │        ║
 ║          │ READS             │ READS             │ READS             │ READS  ║
 ║          ▼                   ▼                   ▼                   ▼        ║
 ║   ┌─────────────┐     ┌─────────────┐     ┌─────────────┐     ┌─────────────┐║
-║   │voice_script │     │master_script│     │asset_manifest│    │ALL PREVIOUS │║
-║   │narrative_   │     │    .md      │     │    .md      │     │   FILES     │║
-║   │script.md    │     │             │     │             │     │             │║
+║   │voice_script │     │narrative_   │     │master_script│     │asset_manifes│║
+║   │    .md      │     │script.md +  │     │    .md      │     │t.md         │║
+║   │             │     │narration_   │     │             │     │             │║
+║   │             │     │cues.md      │     │             │     │             │║
 ║   └─────────────┘     └─────────────┘     └─────────────┘     └─────────────┘║
+║                                                                               ║
+║                    ┌─────────────┐     ┌─────────────┐                        ║
+║                    │ 🧐 EIC      │────►│ 🎙️ NARRATOR │                        ║
+║                    │ (gate)      │     │ (final VO)  │                        ║
+║                    └─────────────┘     └─────────────┘                        ║
+║                           │                   │                               ║
+║                           │ READS             │ WRITES                        ║
+║                           ▼                   ▼                               ║
+║                    ┌─────────────┐     ┌─────────────┐                        ║
+║                    │ALL PREVIOUS │     │narration_   │                        ║
+║                    │   FILES     │     │full.mp3     │                        ║
+║                    └─────────────┘     └─────────────┘                        ║
 ║                                                                               ║
 ║                    ┌─────────────┐     ┌─────────────┐                        ║
 ║                    │ 🎨 THUMBNAIL│     │ 🔍 SEO      │                        ║
@@ -123,6 +136,31 @@
 ╚════════════════════════════════════════════════════════════════════════════════════════╝
 ```
 
+### 🎙️ Narrator tools (audio stage)
+
+```
+╔════════════════════════════════════════════════════════════════════════════════════════╗
+║  TOOL                                  │ NARRATOR │ DIRECTOR │ EIC │ ORCHESTRATOR      ║
+║  ──────────────────────────────────────┼──────────┼──────────┼─────┼───────────────────║
+║  tools/audio/tts_engine.py             │    ✅    │    ❌    │ ❌  │  ✅ (both passes) ║
+║  tools/audio/script_normalizer.py      │    ✅    │    ❌    │ ❌  │  ❌               ║
+║  tools/audio/providers.py              │    ✅    │    ❌    │ ❌  │  ❌               ║
+║  tools/validators/output_validator.py  │    ✅    │    ❌    │ ✅  │  ✅ (voice gate)  ║
+║      (voice)                           │ pre-flight│         │     │                   ║
+║  tools/validators/audio_validator.py   │    ✅    │    ❌    │ ✅  │  ✅ (post-flight) ║
+║  narration_cues.md (READ)              │    ❌    │    ✅    │ ✅  │  ❌               ║
+║  ffmpeg                                │    ✅    │    ❌    │ ✅  │  ❌               ║
+╚════════════════════════════════════════════════════════════════════════════════════════╝
+```
+
+**Why the Narrator is not invoked as an LLM.** Every other stage shells out to an
+AI CLI with a prompt. The Narrator stage calls `tools/audio/tts_engine.py`
+directly. Rendering audio is deterministic work — chunking, synthesis, silence
+splicing, concatenation — and routing it through a language model would add cost,
+latency and non-determinism for no gain. The `/narrator` **persona** exists for
+the interactive path: it explains costs, picks providers, and interprets
+validator output. The **pipeline** path skips straight to the engine.
+
 ---
 
 ## 📁 FILE CREATION & READING FLOW
@@ -154,7 +192,15 @@
 ║      ├──► CREATES: voice_script.md (Script for TTS with voice cues)                      ║
 ║      └──► CREATES: narrative_script.md (Clean script for Director)                       ║
 ║                    │                                                                      ║
-║                    ▼ READS narrative_script.md                                            ║
+║                    ▼ READS voice_script.md                                                ║
+║  🎙️ NARRATOR (draft pass - free provider) ───────────────────────────────────────────►   ║
+║      │                                                                                    ║
+║      ├──► CREATES: assets/audio/narration/narration_draft.mp3                            ║
+║      ├──► CREATES: assets/audio/narration/narration_cues.md (section -> timecode)        ║
+║      ├──► CREATES: assets/audio/narration/narration_manifest.json                        ║
+║      └──► CREATES: voiceover_report.md                                                   ║
+║                    │                                                                      ║
+║                    ▼ READS narrative_script.md + narration_cues.md                        ║
 ║  🎬 DIRECTOR ──────────────────────────────────────────────────────────────────────────►  ║
 ║      │                                                                                    ║
 ║      ├──► CREATES: master_script.md (Scene-by-scene with visual directions)              ║
@@ -646,6 +692,69 @@ FINAL PROJECT FOLDER STRUCTURE
 ║  7️⃣  Word count = Duration × 135 (avg 135 words per minute)                               ║
 ║                                                                                           ║
 ║  8️⃣  Minimum video duration = 15 minutes (2025 words)                                     ║
+║                                                                                           ║
+║  9️⃣  Word count is an ESTIMATE. The Narrator's draft pass gives the REAL runtime;         ║
+║      the Director times shots against narration_cues.md, not the word count.              ║
+║                                                                                           ║
+║  🔟  The Narrator is the ONLY agent that spends money. It must print a cost               ║
+║      estimate and get an explicit yes before any paid synthesis.                          ║
+║                                                                                           ║
+║  1️⃣1️⃣  API keys live in .env ONLY. config.yaml is committed, published to npm and         ║
+║      copied into every user project - a key there is a key leaked.                        ║
+║                                                                                           ║
+║  1️⃣2️⃣  Runtime overruns are SCRIPT problems. Cut words; never raise playback speed.       ║
+║                                                                                           ║
+║  1️⃣3️⃣  Editing voice_script.md makes the narration STALE. stale_detector.py enforces      ║
+║      this, and auto_rework.py invalidates both narration checkpoints on any                ║
+║      script-level rework.                                                                 ║
+║                                                                                           ║
+╚══════════════════════════════════════════════════════════════════════════════════════════╝
+```
+
+---
+
+## 🎙️ NARRATION STAGE DETAIL
+
+```
+╔══════════════════════════════════════════════════════════════════════════════════════════╗
+║                        WHY THE NARRATOR RUNS TWICE                                        ║
+╠══════════════════════════════════════════════════════════════════════════════════════════╣
+║                                                                                           ║
+║   DRAFT PASS                                  FINAL PASS                                  ║
+║   after scriptwriting                         after EIC approval                          ║
+║   ──────────────────────                      ──────────────────────                      ║
+║   provider : free (edge / piper / mock)       provider : production (elevenlabs/sarvam)   ║
+║   cost     : $0                               cost     : ~$0.44-$2.70 per 30 min          ║
+║   purpose  : real runtime for the Director    purpose  : the deliverable                  ║
+║   failure  : WARN, pipeline continues         failure  : FAIL, pipeline stops             ║
+║   gate     : none                             gate     : audio_validator.py               ║
+║                                                                                           ║
+║   Rendering the final pass BEFORE EIC approval would mean paying twice for every          ║
+║   script that gets sent back. In the reference mock run, the EIC rejects once             ║
+║   before approving - so this is the normal case, not the edge case.                       ║
+║                                                                                           ║
+╠══════════════════════════════════════════════════════════════════════════════════════════╣
+║                        PAUSES ARE REAL SILENCE, NOT MARKUP                                ║
+╠══════════════════════════════════════════════════════════════════════════════════════════╣
+║                                                                                           ║
+║   ElevenLabs does not support SSML <break> at all, and every other provider               ║
+║   interprets pause markup differently. So the engine renders speech chunks,               ║
+║   generates silence with ffmpeg, and splices them:                                        ║
+║                                                                                           ║
+║     (pause 2s)  ──►  exactly 2.000 s of silence, on EVERY provider                        ║
+║                                                                                           ║
+║   Consequence: segment n starts exactly where segment n-1 ended, every cue-sheet          ║
+║   timecode is absolute, and the Director's shot list needs no re-syncing.                 ║
+║                                                                                           ║
+╠══════════════════════════════════════════════════════════════════════════════════════════╣
+║                        PROVIDER ROUTING                                                   ║
+╠══════════════════════════════════════════════════════════════════════════════════════════╣
+║                                                                                           ║
+║   audio_language is Indic   ──►  sarvam ► elevenlabs ► gemini ► edge ► piper ► mock       ║
+║   anything else             ──►  elevenlabs ► gemini ► openai ► edge ► piper ► mock       ║
+║                                                                                           ║
+║   The chain is walked until a provider is READY (key present / binary installed).         ║
+║   `mock` is always ready, so the pipeline never hard-blocks on a missing key.             ║
 ║                                                                                           ║
 ╚══════════════════════════════════════════════════════════════════════════════════════════╝
 ```
