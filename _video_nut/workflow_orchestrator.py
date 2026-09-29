@@ -197,7 +197,13 @@ class VideoNutOrchestrator:
         
         if agent_name == "investigator":
             file_path = os.path.join(self.project_path, "truth_dossier.md")
-            content = """# [INVESTIGATOR] Investigator Report: Truth Dossier
+            # This mock must match the structure investigator.md declares
+            # MANDATORY, otherwise mock runs validate green against artifacts
+            # the real validators would reject - which is exactly how the
+            # validator/mock contract mismatch (audit F3) went unnoticed.
+            content = """# Truth Dossier: Mock Topic
+
+## Investigation Questions (15-25 Questions partitioned by layer)
 1. What are the key elements?
 2. Research question 2: How does this work?
 3. Question 3: What are the main points?
@@ -214,9 +220,21 @@ class VideoNutOrchestrator:
 14. Question 14: How does it impact the future?
 15. Question 15: Final summary?
 
-Sources:
-- https://example.com/source1
-- https://youtube.com/watch?v=dQw4w9WgXcQ
+## Findings (Grouped by Layer)
+### Economic Layer Findings
+#### Question 1: What are the key elements?
+**Answer:** Mock finding with a citation for pipeline testing.
+**Source:** https://example.com/source1
+
+### Psychological Layer Findings
+#### Question 4: Who is affected?
+**Answer:** Mock finding describing the affected population.
+**Source:** https://youtube.com/watch?v=dQw4w9WgXcQ
+
+### Structural Layer Findings
+#### Question 7: When did it happen?
+**Answer:** Mock finding covering the structural timeline.
+**Source:** https://example.com/source2
 """
             with open(file_path, 'w', encoding='utf-8') as f:
                 f.write(content)
@@ -227,6 +245,10 @@ Sources:
 [HOOK]
 This is the dramatic opening hook of the documentary video.
 [Visual: Montage of historical footage]
+
+[BRIDGE]
+Here the illusion is shattered and the paradox thesis is introduced: the system
+everyone believes is efficient is structurally incapable of being so.
 
 [MEAT]
 NARRATOR: Here is the core meat and body of the video where we discuss research findings.
@@ -239,6 +261,10 @@ Alan Turing introduced the concept of the Turing Machine, laying the theoretical
 During World War II, machines like Colossus and ENIAC were built for military calculations.
 The microcomputer revolution in the 1970s and 1980s brought computing into the home, paving the way for the internet age and mobile computing.
 [Visual: Graphs and source documents showing Babbage's Analytical Engine and Ada Lovelace's notes]
+
+[VERDICT]
+NARRATOR: The systemic rule underneath all of this is simple, and once you see it
+you cannot unsee it: the incentives were never pointed at the outcome anyone wanted.
 
 [OUTRO]
 NARRATOR: Thank you for watching. Don't forget to like and subscribe for more deep dives into history!
@@ -286,10 +312,21 @@ If this changed how you think about the history of computing, subscribe.
 
         elif agent_name == "director":
             file_path = os.path.join(self.project_path, "master_script.md")
+            # director.md declares this exact format:
+            #   [NARRATION: "..."] [VISUAL: Description. [Source: URL or MANUAL]]
             content = """# [WORKFLOW] Director Master Script
-- Scene 1: Introduction
-  [Visual: Montage, Source: https://youtube.com/watch?v=dQw4w9WgXcQ]
-  Narration: Welcome to the show.
+
+## Scene 1: Introduction [00:00 - 00:30]
+[NARRATION: "This is the dramatic opening hook of the documentary video."]
+[VISUAL: Montage of historical footage. [Source: https://youtube.com/watch?v=dQw4w9WgXcQ]]
+
+## Scene 2: The Shatter [00:30 - 01:15]
+[NARRATION: "Here the illusion is shattered and the paradox thesis is introduced."]
+[VISUAL: Split-screen comparison of the claim against the data. [Source: MANUAL]]
+
+## Scene 3: Verdict [01:15 - 02:00]
+[NARRATION: "The systemic rule underneath all of this is simple."]
+[VISUAL: Slow pan across highlighted contract clauses. [Source: CREATE]]
 """
             with open(file_path, 'w', encoding='utf-8') as f:
                 f.write(content)

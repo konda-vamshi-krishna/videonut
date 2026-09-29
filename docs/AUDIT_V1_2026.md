@@ -33,14 +33,14 @@ Round two also found that **the two halves of the pipeline disagreed about how f
 |---|---|---|---|
 | F1 | 🔴 Critical | Published npm package contains zero agent command files | **Fixed** |
 | F2 | 🟠 High | `subprocess.run(list, shell=True)` silently discards the agent prompt on POSIX | **Fixed** |
-| F3 | 🟠 High | Two validators, conflicting contracts; `file_validator.py` fails on the pipeline's own output | **Documented + gates unified** |
+| F3 | 🟠 High | Two validators, conflicting contracts; `file_validator.py` fails on the pipeline's own output | **Fixed** |
 | F4 | 🟠 High | Author's absolute `G:\youtuber\...` paths shipped to every user | **Fixed** |
 | F5 | 🟠 High | No voiceover stage — the pipeline's cue grammar had no consumer | **Implemented** |
 | F6 | 🟡 Medium | Compiled `.pyc` tracked in git and published to npm; `.gitignore` missing `.env` | **Fixed** |
 | F7 | 🟡 Medium | Agent fan-out generator is unreferenced, incomplete, and hardcodes stale model IDs | **Partially fixed** |
 | F8 | 🟡 Medium | Docs contradict each other on agent count, output folders, and status | **Fixed** |
 | F9 | 🟡 Medium | `requirements.txt` omits PyYAML although config parsing needs it | **Fixed** |
-| F10 | 🟡 Medium | No tests, no CI | **27-test suite added** |
+| F10 | 🟡 Medium | No tests, no CI | **39-test suite + GitHub Actions** |
 | F11 | 🟡 Medium | `ensure_config_sync` rewrites shared config by line-prefix string replacement | **Documented** |
 | F12 | 🟡 Medium | Bare `except:` in `article_screenshotter.py`; dead Nitter dependency | **Documented** |
 | F13 | 🔴 Critical | An EIC *rejection* could be read as an approval — the pipeline failed open | **Fixed** |
@@ -118,7 +118,32 @@ Run against the orchestrator's own mock output, `file_validator.py` **fails 3 of
 
 This is worse than having no validator: a maintainer who runs `file_validator.py` concludes the pipeline is broken; a maintainer who trusts the orchestrator's gates concludes it is fine. Both are reading real output.
 
-**Action taken:** the orchestrator's gate set is now the single contract and has been extended (`dossier, script, voice, manifest, narration`). `file_validator.py` is left in place but is documented here as **unmaintained and non-authoritative** — it should be either deleted or rewritten against the same contract in v1.6. That decision belongs to the maintainer, not to an audit.
+**Resolved in v1.5.2.** Investigating properly changed the diagnosis. F3 was described above as "two validators disagree", but the deeper defect was that **the orchestrator's mock produced artifacts that neither validator would accept**:
+
+- `truth_dossier.md` had no `## Investigation Questions` or `## Findings` headings, though `investigator.md` declares that structure MANDATORY.
+- `narrative_script.md` was missing `[BRIDGE]` and `[VERDICT]`, two of the five beat markers `scriptwriter.md` specifies.
+- `master_script.md` used `Narration: …` prose instead of the `[NARRATION: "…"] [VISUAL: … [Source: …]]` format `director.md` declares.
+
+So every mock run validated against a fake that did not resemble real agent output. Mock mode gave false confidence, and `file_validator.py` looked broken when it was partly telling the truth.
+
+Three changes:
+
+1. **The mock now matches the real contracts.** A mock run produces artifacts shaped exactly as the agent prompts specify.
+2. **`output_validator.py` is the single implementation**, extended with `validate_master_script()` and a `project` mode that sweeps every artifact and prints one line each.
+3. **`file_validator.py` is now a deprecation shim.** It keeps both CLI modes and its old importable names, but every check delegates. Its genuinely stale requirements are gone: it demanded `The Angle` and `The Conflict` sections that `investigator.md` has *never* produced — which is why it failed on correct output.
+
+Before and after, on the same project folder:
+
+```
+# before                                   # after
+[FAIL] truth_dossier.md   missing sections  [OK] truth_dossier.md    3 URLs, 15 items
+[FAIL] narrative_script.md missing markers  [OK] narrative_script.md valid structure
+[FAIL] master_script.md   no narration      [OK] master_script.md    3 narration, 3 visual
+[OK]   asset_manifest.md                    [OK] asset_manifest.md   2 verified URLs
+exit 1                                      exit 0
+```
+
+Guarded by three tests, including one that renders a project through the mock agents and validates it with the production validator — so the mock and the agent contracts can no longer drift apart silently. It was confirmed to fail when the mock is broken.
 
 ### F4 — Author's machine paths shipped to users
 
@@ -614,9 +639,9 @@ chain costs `$0.00` per 1,000 characters.
 
 Not done here, in priority order:
 
-1. **Resolve F3.** Delete `file_validator.py` or rewrite it against the orchestrator's contract. Two validators is worse than one.
+1. ~~**Resolve F3.**~~ **Done in v1.5.2** — see the F3 entry above.
 2. **Move `generate_agents.py` out of `scratch/`**, teach it to emit `cli_templates/**` and `.antigravity/config.toml`, refresh the default model IDs.
-3. **Add CI.** `python tests/run_tests.py` plus `npm run verify-package` on every push would have caught F1, F2, F4, F6 and F7 before release.
+3. ~~**Add CI.**~~ **Done in v1.5.2** — `.github/workflows/ci.yml`, four jobs (tests on Python 3.9/3.12, real-tarball package check, agent-drift, hygiene). Green on first run.
 4. **Fix F11** with per-project state instead of mutating the shared `config.yaml`.
 5. **Rewrite `USER_GUIDE.md`** end to end; it is the most-read and least-accurate file in the repository.
 6. **Retire or replace `social_media_reader.py`** — its Nitter backend no longer exists.

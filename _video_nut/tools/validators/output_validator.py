@@ -233,10 +233,96 @@ def validate_narration(project_path):
     return False, "; ".join(result["errors"]) or "narration validation failed"
 
 
+# Artifact -> validator. Order matches the pipeline so the report reads like a
+# run. `required` is False for artifacts a given run may legitimately not have
+# reached yet; missing ones are reported as SKIP, not FAIL.
+PROJECT_ARTIFACTS = [
+    ("truth_dossier.md", "dossier", True),
+    ("narrative_script.md", "script", True),
+    ("voice_script.md", "voice", False),
+    ("master_script.md", "master", False),
+    ("asset_manifest.md", "manifest", True),
+]
+
+
+def validate_master_script(path):
+    """
+    master_script.md is the Director's combined narration+visual reference.
+    director.md declares the format as:
+        [NARRATION: "..."] [VISUAL: Description. [Source: URL or MANUAL]]
+    """
+    if not os.path.exists(path):
+        return False, f"File does not exist: {path}"
+    with open(path, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    if len(content.strip()) < 100:
+        return False, "File content too short, may be incomplete"
+
+    narration = re.findall(r"\[NARRATION:.*?\]", content, re.S)
+    visual = re.findall(r"\[VISUAL:.*?\]", content, re.S)
+
+    if not narration:
+        return False, ('No narration blocks found. director.md requires '
+                       '[NARRATION: "..."] blocks in master_script.md.')
+    if not visual:
+        return False, ("No visual blocks found. director.md requires "
+                       "[VISUAL: ...] blocks in master_script.md.")
+    return True, f"Valid master script ({len(narration)} narration, {len(visual)} visual blocks)"
+
+
+def validate_project(project_path):
+    """
+    Sweep every artifact in a project folder and report one line each.
+
+    This replaces the old top-level `file_validator.py`, which duplicated these
+    checks with a *different* and partly stale contract - it demanded 'The Angle'
+    and 'The Conflict' headings that investigator.md has never produced, so it
+    failed on correct output. One implementation, one contract.
+    """
+    if not os.path.isdir(project_path):
+        return False, f"Project directory does not exist: {project_path}"
+
+    dispatch = {
+        "dossier": validate_dossier,
+        "script": validate_script,
+        "voice": validate_voice_script,
+        "manifest": validate_manifest,
+        "master": validate_master_script,
+    }
+
+    lines, failed, checked = [], 0, 0
+    for filename, kind, required in PROJECT_ARTIFACTS:
+        path = os.path.join(project_path, filename)
+        if not os.path.exists(path):
+            if required:
+                failed += 1
+                lines.append(f"  [FAIL] {filename}: missing (required)")
+            else:
+                lines.append(f"  [SKIP] {filename}: not produced yet")
+            continue
+        checked += 1
+        try:
+            good, msg = dispatch[kind](path)
+        except Exception as e:  # a crashing validator is a failing validator
+            good, msg = False, f"validator crashed: {type(e).__name__}: {e}"
+        if good:
+            lines.append(f"  [OK]   {filename}: {msg}")
+        else:
+            failed += 1
+            lines.append(f"  [FAIL] {filename}: {msg}")
+
+    report = "\n".join(lines)
+    if failed:
+        return False, f"{failed} artifact(s) failed validation:\n{report}"
+    return True, f"All {checked} artifact(s) validated:\n{report}"
+
+
+
 def main():
     if len(sys.argv) < 3:
         print("Usage: python output_validator.py <type> <file_path|project_path>")
-        print("Types: dossier, script, voice, manifest, narration")
+        print("Types: dossier, script, voice, master, manifest, narration, project")
         sys.exit(1)
         
     val_type = sys.argv[1].lower()
@@ -250,6 +336,10 @@ def main():
         success, msg = validate_voice_script(file_path)
     elif val_type == "narration":
         success, msg = validate_narration(file_path)
+    elif val_type == "master":
+        success, msg = validate_master_script(file_path)
+    elif val_type == "project":
+        success, msg = validate_project(file_path)
     elif val_type == "manifest":
         success, msg = validate_manifest(file_path)
     else:

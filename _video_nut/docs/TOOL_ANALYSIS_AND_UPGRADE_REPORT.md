@@ -48,7 +48,7 @@ graph TD
 6. **Visionary (🎨)**: Creates visual generation prompts (Midjourney/Stable Diffusion) for scenes lacking real-world footage.
 7. **Scavenger (🦅)**: Finds source links. Uses `link_checker.py` to verify URLs and `youtube_search.py` to locate corresponding footage.
 8. **Archivist (💾)**: Secures assets to local storage. Uses **all downloaders** (`image_grabber.py`, `article_screenshotter.py`, `clip_grabber.py`, `pdf_screenshotter.py`, etc.) and renames files systematically.
-9. **Editor-in-Chief (🧐)**: Quality control. Uses `file_validator.py` to check for 0-byte or corrupted assets and verifies logs.
+9. **Editor-in-Chief (🧐)**: Quality control. Uses `tools/validators/output_validator.py project <dir>` to sweep every artifact and verifies logs. (`file_validator.py` still works but is a deprecated shim that forwards here.)
 10. **Thumbnail Agent (🎨)**: Generates thumbnail concept prompts.
 11. **SEO Agent (🔍)**: Performs metadata optimization.
 

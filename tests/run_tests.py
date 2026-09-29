@@ -779,6 +779,97 @@ def _():
 
 
 
+@test("F3: the orchestrator's mock output passes the real validators")
+def _():
+    """
+    The audit's F3 was not really 'two validators' - it was that the mock
+    produced artifacts the real validators rejected, so mock runs gave false
+    confidence and file_validator.py looked broken when it ran on them.
+
+    This test renders a project with the mock agents and validates it with the
+    production validator. If someone changes an agent's output contract without
+    updating the mock (or vice versa), this fails.
+    """
+    sys.path.insert(0, VALIDATORS)
+    import importlib
+    ov = importlib.import_module("output_validator")
+
+    orch_dir = VN
+    sys.path.insert(0, orch_dir)
+    cwd = os.getcwd()
+    proj = tempfile.mkdtemp(prefix="vn_f3_")
+    cfg = os.path.join(VN, "config.yaml")
+    backup = open(cfg, "r", encoding="utf-8").read() if os.path.exists(cfg) else None
+    try:
+        os.chdir(orch_dir)
+        wo = importlib.import_module("workflow_orchestrator")
+        cls = next(v for v in vars(wo).values()
+                   if isinstance(v, type) and hasattr(v, "run_mock_agent"))
+        o = cls.__new__(cls)
+        o.project_path = proj
+        for agent in ("investigator", "scriptwriter", "director", "visionary", "scavenger"):
+            try:
+                o.run_mock_agent(agent)
+            except Exception:
+                pass
+    finally:
+        os.chdir(cwd)
+        if backup is not None:
+            with open(cfg, "w", encoding="utf-8") as fh:
+                fh.write(backup)
+
+    try:
+        good, msg = ov.validate_project(proj)
+        ok(good, f"mock output must satisfy the production validator:\n{msg}")
+    finally:
+        shutil.rmtree(proj, ignore_errors=True)
+
+
+@test("F3: there is one validator implementation, not two")
+def _():
+    """
+    file_validator.py is now a deprecation shim. If someone re-adds independent
+    checking logic to it, the two contracts can drift apart again - which is how
+    it ended up demanding dossier headings the Investigator never wrote.
+    """
+    src = open(os.path.join(VN, "file_validator.py"), encoding="utf-8").read()
+    ok("DEPRECATED" in src, "file_validator.py announces that it is deprecated")
+    ok("output_validator" in src, "file_validator.py delegates to output_validator")
+    for stale in ("The Angle", "The Conflict"):
+        ok(f"'{stale}'" not in src and f'"{stale}"' not in src,
+           f"the stale {stale!r} requirement is gone")
+    # The old file hand-rolled these regexes; the shim must not.
+    ok("re.findall" not in src, "the shim carries no validation logic of its own")
+
+
+@test("validators: the project sweep reports every artifact and fails on a bad one")
+def _():
+    sys.path.insert(0, VALIDATORS)
+    import importlib
+    ov = importlib.import_module("output_validator")
+
+    d = tempfile.mkdtemp(prefix="vn_sweep_")
+    try:
+        good, msg = ov.validate_project(d)
+        eq(good, False, "an empty folder fails the sweep")
+        ok("truth_dossier.md" in msg, "the report names the missing required artifact")
+
+        bad = os.path.join(d, "master_script.md")
+        with open(bad, "w", encoding="utf-8") as fh:
+            fh.write("# Master\n\nNo narration blocks here at all, just prose. " * 5)
+        good, msg = ov.validate_master_script(bad)
+        eq(good, False, "a master script with no [NARRATION:] blocks fails")
+
+        with open(bad, "w", encoding="utf-8") as fh:
+            fh.write('# Master\n\n[NARRATION: "Line one."]\n'
+                     '[VISUAL: A wide shot. [Source: MANUAL]]\n' * 4)
+        good, msg = ov.validate_master_script(bad)
+        eq(good, True, f"a correctly formatted master script passes ({msg})")
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+
 def main():
     print(f"\n{'=' * 68}")
     print("  VideoNut regression suite")
