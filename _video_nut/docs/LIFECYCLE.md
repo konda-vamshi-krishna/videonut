@@ -689,7 +689,11 @@ FINAL PROJECT FOLDER STRUCTURE
 ║                                                                                           ║
 ║  6️⃣  Industry Tag helps agents prioritize relevant sources                                ║
 ║                                                                                           ║
-║  7️⃣  Word count = Duration × 135 (avg 135 words per minute)                               ║
+║  7️⃣  Word count = Duration × WPM, and WPM depends on the LANGUAGE:                        ║
+║         English 135 · Hindi 115 · Telugu 110 · everything else 120                        ║
+║      Indian languages carry more syllables per word, so a flat 135 over-writes            ║
+║      Telugu and Hindi scripts by 12-15% and the narration gate then rejects them.         ║
+║      Single source of truth: tools/audio/script_normalizer.py WPM_BY_LANGUAGE.            ║
 ║                                                                                           ║
 ║  8️⃣  Minimum video duration = 15 minutes (2025 words)                                     ║
 ║                                                                                           ║

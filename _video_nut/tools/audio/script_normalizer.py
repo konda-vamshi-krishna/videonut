@@ -83,19 +83,35 @@ SECTION_MARKERS = [
 
 # Average spoken words-per-minute by language family. Used for duration and cost
 # estimates before a single API call is made (see tts_engine --dry-run).
+# ──────────────────────────────────────────────────────────────────────────────
+# Speaking rate - SINGLE SOURCE OF TRUTH for the whole pipeline.
+#
+# These MUST match the table in agents/creative/scriptwriter.md and
+# agents/core/prompt_agent.md, because the Scriptwriter sizes the script with
+# them and the Narrator measures the result against them.
+#
+# They did not match before v1.5.1: the normalizer assumed English 150 / Hindi
+# 135 / Telugu 125 while the agents wrote to 135 / 115 / 110. A correctly-sized
+# 15-minute Hindi script therefore estimated at 12.8 minutes - a 14.8% shortfall
+# that failed the narration gate's 10% tolerance. Telugu, Marathi and Bengali
+# failed the same way; English sat exactly on the boundary at -10.0%.
+#
+# If you change a number here, change it in BOTH agent prompts too.
+# tests/run_tests.py asserts the three stay in sync.
+# ──────────────────────────────────────────────────────────────────────────────
 WPM_BY_LANGUAGE = {
-    "english": 150,
-    "hindi": 135,
-    "telugu": 125,
-    "tamil": 125,
-    "kannada": 125,
+    "english": 135,
+    "telugu": 110,
+    "hindi": 115,
+    "tamil": 120,
+    "kannada": 120,
     "malayalam": 120,
-    "marathi": 135,
-    "bengali": 135,
-    "gujarati": 135,
-    "punjabi": 135,
-    "odia": 130,
-    "default": 140,
+    "marathi": 120,
+    "bengali": 120,
+    "gujarati": 120,
+    "punjabi": 120,
+    "odia": 120,
+    "default": 120,   # "Others (120 wpm)" in the agent prompts
 }
 
 # VideoNut cue -> canonical intent. Keep this table as the single source of truth;

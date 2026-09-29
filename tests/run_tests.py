@@ -571,6 +571,182 @@ def t_narrator_documented():
 # Runner
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# Cross-agent consistency (added v1.5.1 after the audit found silent drift)
+# ---------------------------------------------------------------------------
+
+
+@test("consistency: the WPM table is identical in the normalizer, the agents and LIFECYCLE")
+def _():
+    """
+    The scriptwriter sizes a script with one words-per-minute table and the
+    narrator measures it with another. When they drifted, a correctly sized
+    Telugu script came out 12% short and the narration gate rejected it.
+    Any future edit must touch all four places or this test fails.
+    """
+    import re
+    from script_normalizer import WPM_BY_LANGUAGE
+
+    expected = {"english": 135, "telugu": 110, "hindi": 115}
+    for lang, wpm in expected.items():
+        eq(WPM_BY_LANGUAGE[lang], wpm, f"normalizer WPM for {lang}")
+    eq(WPM_BY_LANGUAGE["default"], 120, "normalizer default WPM")
+
+    sources = {
+        "scriptwriter.md": os.path.join(VN, "agents", "creative", "scriptwriter.md"),
+        "prompt_agent.md": os.path.join(VN, "agents", "core", "prompt_agent.md"),
+        "LIFECYCLE.md": os.path.join(VN, "docs", "LIFECYCLE.md"),
+    }
+    for label, path in sources.items():
+        ok(os.path.exists(path), f"{label} exists")
+        text = open(path, encoding="utf-8").read()
+        for lang, wpm in expected.items():
+            ok(re.search(lang + r"\D{0,14}" + str(wpm), text, re.I) is not None,
+               f"{label} states {lang.title()} = {wpm} wpm")
+
+
+@test("rework: an unresolvable EIC verdict fails CLOSED, never as an approval")
+def _():
+    """
+    The original parse_review_result() returned None for BOTH "approved" and
+    "I could not work out what happened", and the orchestrator read any absence
+    of a RERUN_STAGE line as approval. A missing verdict file therefore shipped
+    an unreviewed video - and, once the Narrator existed, paid for its final
+    narration too. Each of these cases must now be UNDETERMINED.
+    """
+    sys.path.insert(0, os.path.join(VN, "tools"))
+    import importlib
+    ar = importlib.import_module("auto_rework")
+    importlib.reload(ar)
+
+    cases = {
+        "no review_result.json at all": None,
+        "malformed JSON": "{\"verdict\":",
+        "rejected but no agent named": '{"verdict": "REJECTED", "failed_agents": []}',
+        "an agent nobody recognises": '{"verdict": "REJECTED", "rerun_from": "gaffer"}',
+        "a manual-only agent": '{"verdict": "REJECTED", "rerun_from": "prompt"}',
+    }
+    for label, payload in cases.items():
+        d = tempfile.mkdtemp(prefix="vn_rework_")
+        try:
+            if payload is not None:
+                with open(os.path.join(d, "review_result.json"), "w", encoding="utf-8") as fh:
+                    fh.write(payload)
+            raised = False
+            try:
+                ar.parse_review_result(d)
+            except ar.UndeterminedVerdict:
+                raised = True
+            ok(raised, f"UndeterminedVerdict raised for: {label}")
+        finally:
+            shutil.rmtree(d, ignore_errors=True)
+
+
+@test("rework: a real rejection still routes to the right stage")
+def _():
+    sys.path.insert(0, os.path.join(VN, "tools"))
+    import importlib
+    ar = importlib.import_module("auto_rework")
+
+    for name, stage in [("investigator", "investigation"),
+                        ("INV", "investigation"),
+                        ("scriptwriter", "scriptwriting"),
+                        ("narrator", "voiceover")]:
+        d = tempfile.mkdtemp(prefix="vn_rework_")
+        try:
+            with open(os.path.join(d, "review_result.json"), "w", encoding="utf-8") as fh:
+                json.dump({"verdict": "REJECTED", "rerun_from": name}, fh)
+            got, _msg = ar.parse_review_result(d)
+            eq(got, stage, f"{name!r} routes to {stage!r}")
+        finally:
+            shutil.rmtree(d, ignore_errors=True)
+
+    d = tempfile.mkdtemp(prefix="vn_rework_")
+    try:
+        with open(os.path.join(d, "review_result.json"), "w", encoding="utf-8") as fh:
+            json.dump({"verdict": "APPROVED"}, fh)
+        got, _msg = ar.parse_review_result(d)
+        eq(got, None, "an explicit APPROVED returns no stage")
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+@test("rework: every agent the EIC can name is routable or explicitly manual")
+def _():
+    """The EIC prompt and the rework engine must share one vocabulary."""
+    import re
+    sys.path.insert(0, os.path.join(VN, "tools"))
+    import importlib
+    ar = importlib.import_module("auto_rework")
+
+    eic = open(os.path.join(VN, "agents", "core", "eic.md"), encoding="utf-8").read()
+    block = re.search(r'Ask: "Which agent\? \[(.+?)\]"', eic, re.S)
+    ok(block is not None, "the EIC still asks which agent to send work back to")
+    names = [n.strip().lower() for n in re.split(r"[/\s\n]+", block.group(1)) if n.strip()]
+    ok(len(names) >= 7, f"the EIC offers a full agent list (got {len(names)})")
+    known = set(ar.AGENT_TO_STAGE) | set(ar.MANUAL_ONLY_AGENTS)
+    for n in names:
+        ok(n in known, f"EIC-offered agent {n!r} is known to the rework engine")
+
+
+@test("consistency: the narrator and visionary are reachable from the pipeline")
+def _():
+    """
+    Both agents existed with no inbound handoff - nothing in the pipeline ever
+    told the user to run them, so they were dead code from the user's side.
+    """
+    agents_dir = os.path.join(VN, "agents")
+    body = ""
+    for root, _dirs, files in os.walk(agents_dir):
+        for f in files:
+            if f.endswith(".md"):
+                body += open(os.path.join(root, f), encoding="utf-8").read()
+    for slash, owner in [("/narrator", "narrator"), ("/visionary", "visionary")]:
+        others = body.count(slash)
+        ok(others >= 2, f"{slash} is named as a next step somewhere ({others} mentions)")
+
+
+@test("consistency: the director times shots against measured narration, not a guess")
+def _():
+    d = open(os.path.join(VN, "agents", "creative", "director.md"), encoding="utf-8").read()
+    ok("narration_cues.md" in d, "the director reads narration_cues.md")
+    ok("ESTIMATED" in d or "estimate" in d.lower(),
+       "the director warns when it is falling back to estimated timings")
+
+
+@test("providers: kokoro is registered, free, offline and refuses languages it cannot speak")
+def _():
+    import providers as P
+
+    ok("kokoro" in P.REGISTRY, "kokoro is in the provider registry")
+    prof = P.PROFILES["kokoro"]
+    eq(prof.usd_per_1k_chars, 0.0, "kokoro costs nothing per character")
+    eq(prof.offline, True, "kokoro runs offline")
+    ok(prof.max_chars <= 450, f"kokoro chunks under its ~510 token cap (got {prof.max_chars})")
+
+    # It must not silently mangle a language it has no voice for.
+    ready, why = P.get_provider("kokoro", P.ProviderSettings(language="Telugu")).check_ready()
+    eq(ready, False, "kokoro refuses Telugu")
+    ok("sarvam" in why.lower(), "and points at a provider that can do it")
+
+    # A draft pass must never reach for a paid API.
+    for name in P.DRAFT_CHAIN:
+        eq(P.PROFILES[name].usd_per_1k_chars, 0.0, f"draft-chain provider {name!r} is free")
+
+
+@test("providers: the piper profile no longer claims an MIT licence")
+def _():
+    """
+    rhasspy/piper (MIT) was archived in Oct 2025; the maintained fork is GPL-3.0.
+    Shipping a distributed npm package on a wrong licence note is a real risk.
+    """
+    import providers as P
+    notes = P.PROFILES["piper"].notes
+    ok("MIT-licensed neural TTS" not in notes, "the stale MIT claim is gone")
+    ok("GPL" in notes, "the note mentions the actual GPL-3.0 fork")
+
+
+
 def main():
     print(f"\n{'=' * 68}")
     print("  VideoNut regression suite")

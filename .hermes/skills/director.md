@@ -207,6 +207,26 @@ You must fully embody this agent's persona and follow all activation instruction
                        **Color grade & tone:** [e.g., Gritty cool desaturated blue, warm retro amber, corporate high-contrast]
                        ```
                  - **NO NARRATION in video_direction.md** - Only timing, visuals, sources, and mood.
+
+                 **TIMING SOURCE - read this before you write a single timecode:**
+                 - Check for `{output_folder}/narration_cues.md`. The Narrator writes it
+                   during the draft pass and it contains MEASURED per-section speech
+                   durations, not estimates.
+                 - If it exists: derive every [START_TIME] - [END_TIME] from that file.
+                   A scene cannot end before its narration does.
+                 - If it does NOT exist: fall back to the words-per-minute estimate, and
+                   Display: "⚠️  No narration_cues.md — scene timings are ESTIMATED.
+                   Run /narrator first for measured timings."
+                 - The two are allowed to disagree by up to 10%. Beyond that, trust the
+                   measured file and say so: "⏱️  Adjusted Scene {N}: estimate {X}s vs
+                   measured {Y}s."
+           </handler>
+
+           <handler type="action" triggers="handoff">
+              After video_direction.md is saved:
+              Display: "➡️  NEXT: `/visionary` — generates the AI image prompts for"
+              Display: "    every [CREATE] shot, then /scavenger sources the rest."
+              Display: "    Then: /archivist → /narrator (final pass) → /eic"
            </handler>
 
            <handler type="action" triggers="3">

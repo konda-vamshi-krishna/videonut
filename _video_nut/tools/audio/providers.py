@@ -22,7 +22,11 @@ Selection guidance (see docs/VOICE_AGENT.md for the full benchmark write-up):
   gemini      Very strong quality-per-rupee, prompt-steerable delivery,
               multi-speaker. Returns raw 24kHz PCM that we wrap into WAV.
   openai      Cheap, dependable, `instructions` field for delivery steering.
-  piper       Fully offline, MIT-licensed, zero cost. Draft passes / air-gapped.
+  kokoro      Apache-2.0, 82M params, ~300MB, CPU-only. UTMOS ~4.45.
+              The best quality-per-watt for long-form. English + Hindi.
+  piper       Fully offline, zero cost, very fast, lower quality. NOTE: the
+              maintained fork (OHF-Voice/piper1-gpl) is GPL-3.0, not MIT -
+              check that before bundling it into a distributed product.
   edge        Free network voices via the `edge-tts` CLI. Draft passes only.
   mock        Deterministic silent audio. Used by tests and `--cli mock`.
 
@@ -163,6 +167,22 @@ PROFILES: Dict[str, ProviderProfile] = {
         env_keys=("OPENAI_API_KEY",),
         notes="gpt-4o-mini-tts with the `instructions` field for delivery steering.",
     ),
+    "kokoro": ProviderProfile(
+        name="kokoro",
+        dialect="plain",
+        # Kokoro caps at ~510 phoneme tokens per pass. 400 characters is a safe
+        # conservative ceiling; the engine merges sentences up to this and never
+        # across a section boundary, which also sidesteps the paragraph-boundary
+        # artifacts Kokoro shows in single-shot 10-minute generations.
+        max_chars=400,
+        audio_ext="wav",
+        usd_per_1k_chars=0.0,
+        supports_indic=True,   # Hindi only - see KOKORO_LANG_CODES
+        offline=True,
+        notes=("Kokoro-82M (Apache-2.0). 82M params, ~300MB, runs on CPU at roughly "
+               "1.5-3x real-time. UTMOS ~4.45 - the best quality-per-watt option for "
+               "long-form narration. No voice cloning; 54 preset voices."),
+    ),
     "piper": ProviderProfile(
         name="piper",
         dialect="plain",
@@ -171,7 +191,10 @@ PROFILES: Dict[str, ProviderProfile] = {
         usd_per_1k_chars=0.0,
         supports_indic=False,
         offline=True,
-        notes="Local MIT-licensed neural TTS. Zero cost, no network, draft quality.",
+        notes=("Local offline neural TTS, ~20M params, very fast, draft quality. "
+               "Licence changed: rhasspy/piper (MIT) was archived Oct 2025 and the "
+               "maintained fork OHF-Voice/piper1-gpl is GPL-3.0. Existing MIT-era "
+               "weights stay usable, but do not assume MIT for new installs."),
     ),
     "edge": ProviderProfile(
         name="edge",
@@ -206,6 +229,12 @@ DEFAULT_VOICES: Dict[str, Dict[str, str]] = {
     },
     "gemini": {"default": "Charon"},   # deep, measured narration voice
     "openai": {"default": "onyx"},
+    "kokoro": {
+        # af_/am_ = American female/male, bf_/bm_ = British.
+        # am_michael and bm_george are the steadiest for documentary narration.
+        "default": "am_michael",
+        "hindi": "hf_alpha",
+    },
     "piper": {"default": "en_US-lessac-medium"},
     "edge": {
         "default": "en-US-GuyNeural",
@@ -428,6 +457,125 @@ class OpenAIProvider(BaseProvider):
         return self._write_bytes(out_path, response.content)
 
 
+# Kokoro's lang_code is a single letter, not a BCP-47 tag.
+KOKORO_LANG_CODES = {
+    "english": "a",      # a = American English, b = British English
+    "british english": "b",
+    "hindi": "h",
+    "spanish": "e",
+    "french": "f",
+    "italian": "i",
+    "portuguese": "p",
+    "japanese": "j",
+    "mandarin": "z",
+    "chinese": "z",
+}
+
+
+class KokoroProvider(BaseProvider):
+    """
+    Kokoro-82M - the low-compute choice for 15-20 minute scripts.
+
+    Why this exists: a 20-minute documentary is ~16,000 characters. On a paid API
+    that is a recurring bill on every re-render; on a GPU model it is a GPU you
+    have to own. Kokoro is 82M parameters and 300MB, runs on a plain CPU at
+    roughly 1.5-3x real-time, and scores UTMOS ~4.45 - close enough to commercial
+    TTS that most listeners will not flag it in narration.
+
+    It cannot clone a voice and its emotional range is narrow. For an
+    investigative documentary read - measured, even, credible - that narrowness
+    is closer to an asset than a defect.
+
+    Two runtimes are supported, preferred in this order:
+      1. `kokoro-onnx`  - no PyTorch, smallest install, fastest on CPU
+      2. `kokoro`       - the reference PyTorch package
+    Both are imported lazily so the module still loads with neither installed.
+    """
+
+    profile = PROFILES["kokoro"]
+    _pipeline = None          # cached across chunks; loading costs ~1.7s
+    _pipeline_key = None
+
+    def lang_code(self) -> str:
+        return KOKORO_LANG_CODES.get((self.settings.language or "english").strip().lower(), "a")
+
+    def check_ready(self) -> Tuple[bool, str]:
+        lang = (self.settings.language or "english").strip().lower()
+        if lang not in KOKORO_LANG_CODES and not is_indic(lang):
+            pass  # unknown language just falls back to English phonemisation
+        if is_indic(lang) and lang != "hindi":
+            return False, (f"Kokoro has no {lang.title()} voice (Hindi is its only Indic "
+                           "language). Use `sarvam` for other Indian languages.")
+        try:
+            import kokoro_onnx  # noqa: F401
+            return True, "ready (kokoro-onnx, CPU)"
+        except ImportError:
+            pass
+        try:
+            import kokoro  # noqa: F401
+        except ImportError:
+            return False, ("Kokoro is not installed. `pip install kokoro-onnx soundfile` "
+                           "(CPU, no GPU needed, ~300MB model downloaded on first use).")
+        try:
+            import soundfile  # noqa: F401
+        except ImportError:
+            return False, "Kokoro is installed but `soundfile` is missing. `pip install soundfile`."
+        return True, "ready (kokoro PyTorch, CPU)"
+
+    def _get_pipeline(self):
+        key = (self.lang_code(), self.resolved_voice())
+        if KokoroProvider._pipeline is not None and KokoroProvider._pipeline_key == key:
+            return KokoroProvider._pipeline
+        from kokoro import KPipeline  # imported lazily - heavy
+        KokoroProvider._pipeline = KPipeline(lang_code=self.lang_code())
+        KokoroProvider._pipeline_key = key
+        return KokoroProvider._pipeline
+
+    def synthesize(self, text: str, style: str, out_path: str) -> str:
+        os.makedirs(os.path.dirname(os.path.abspath(out_path)), exist_ok=True)
+        voice = self.resolved_voice() or "am_michael"
+        speed = float(self.settings.pace or 1.0)
+
+        # Preferred path: ONNX runtime, no PyTorch.
+        try:
+            from kokoro_onnx import Kokoro
+            import soundfile as sf
+            model = getattr(KokoroProvider, "_onnx", None)
+            if model is None:
+                model = Kokoro("kokoro-v1.0.onnx", "voices-v1.0.bin")
+                KokoroProvider._onnx = model
+            samples, sample_rate = model.create(
+                text, voice=voice, speed=speed, lang=self.lang_code()
+            )
+            sf.write(out_path, samples, sample_rate)
+            if os.path.exists(out_path) and os.path.getsize(out_path) > 44:
+                return out_path
+        except ImportError:
+            pass
+        except Exception as e:
+            raise ProviderError(f"kokoro-onnx failed: {e}") from e
+
+        # Fallback: the reference PyTorch package.
+        try:
+            import numpy as np
+            import soundfile as sf
+        except ImportError as e:
+            raise ProviderError(
+                "Kokoro needs numpy and soundfile. `pip install kokoro soundfile`."
+            ) from e
+
+        try:
+            pipeline = self._get_pipeline()
+            chunks = [audio for _gs, _ps, audio in pipeline(text, voice=voice, speed=speed)]
+        except Exception as e:
+            raise ProviderError(f"kokoro synthesis failed: {e}") from e
+
+        if not chunks:
+            raise ProviderError("kokoro returned no audio for this chunk.")
+        sf.write(out_path, np.concatenate(chunks), 24000)
+        return out_path
+
+
 class PiperProvider(BaseProvider):
     profile = PROFILES["piper"]
 
@@ -488,6 +636,7 @@ REGISTRY = {
     "sarvam": SarvamProvider,
     "gemini": GeminiProvider,
     "openai": OpenAIProvider,
+    "kokoro": KokoroProvider,
     "piper": PiperProvider,
     "edge": EdgeProvider,
     "mock": MockProvider,
@@ -503,6 +652,11 @@ def get_provider(name: str, settings: ProviderSettings) -> BaseProvider:
     return REGISTRY[key](settings)
 
 
+DRAFT_CHAIN = ["kokoro", "piper", "edge", "mock"]
+"""Draft renders exist to measure runtime, not to sound good. Always free, always
+local if possible - never bill a paid API for a timing pass."""
+
+
 def available_providers(language: str = "English") -> Dict[str, Tuple[bool, str]]:
     """Readiness probe for every provider - powers `check_env.py` and the agent menu."""
     report = {}
@@ -512,20 +666,43 @@ def available_providers(language: str = "English") -> Dict[str, Tuple[bool, str]
     return report
 
 
-def resolve_auto_provider(language: str, preference: Optional[list] = None) -> Tuple[str, str]:
+def resolve_auto_provider(
+    language: str,
+    preference: Optional[list] = None,
+    prefer_local: bool = False,
+) -> Tuple[str, str]:
     """
     Pick the best *ready* provider for a language.
 
     Routing policy (overridable via config.yaml voice.fallback_chain):
-      Indic languages -> sarvam  > elevenlabs > gemini > edge > mock
-      Everything else -> elevenlabs > gemini > openai > edge > mock
+
+      cloud-first (default)
+        Indic     -> sarvam > elevenlabs > gemini > kokoro > edge > piper > mock
+        otherwise -> elevenlabs > gemini > openai > kokoro > edge > piper > mock
+
+      local-first (voice.prefer_local: true)
+        Indic     -> kokoro > sarvam > elevenlabs > gemini > piper > edge > mock
+        otherwise -> kokoro > piper > elevenlabs > gemini > openai > edge > mock
+
+    `prefer_local` exists because a 15-20 minute documentary is ~12,000-16,000
+    characters, and at that length a local CPU model stops being a compromise:
+    Kokoro-82M scores UTMOS ~4.45 against ElevenLabs' arena-level quality, runs
+    at 1.5-3x real-time on a plain CPU, and costs nothing per render. For a
+    catalogue of many long videos that difference compounds fast.
+
+    Kokoro only speaks Hindi among Indian languages, so its check_ready() refuses
+    Telugu/Tamil/etc. and the chain falls through to Sarvam automatically.
     """
     if preference:
         chain = list(preference)
+    elif prefer_local and is_indic(language):
+        chain = ["kokoro", "sarvam", "elevenlabs", "gemini", "piper", "edge", "mock"]
+    elif prefer_local:
+        chain = ["kokoro", "piper", "elevenlabs", "gemini", "openai", "edge", "mock"]
     elif is_indic(language):
-        chain = ["sarvam", "elevenlabs", "gemini", "edge", "piper", "mock"]
+        chain = ["sarvam", "elevenlabs", "gemini", "kokoro", "edge", "piper", "mock"]
     else:
-        chain = ["elevenlabs", "gemini", "openai", "edge", "piper", "mock"]
+        chain = ["elevenlabs", "gemini", "openai", "kokoro", "edge", "piper", "mock"]
 
     reasons = []
     for name in chain:

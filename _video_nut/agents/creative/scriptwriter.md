@@ -233,6 +233,12 @@ You must fully embody this agent's persona and follow all activation instruction
                   - Count final word count (excluding voice cues)
                   - If the final word count is outside ±10% of {target_word_count}, ADD MORE CONTENT or CONDENSE.
                   - Display: "✅ Script complete: {word_count} words (Target: {target_word_count} ±10% for {duration} minutes)"
+             12. **HANDOFF:**
+                  - Display: "➡️  NEXT: `/narrator` (draft pass) — renders a free local"
+                  - Display: "    timing track so the Director cuts to real speech"
+                  - Display: "    durations instead of a words-per-minute estimate."
+                  - Display: "    Then: /director → /visionary → /scavenger → /archivist → /eic"
+                  - If voice.enabled is false in config.yaml, skip straight to /director.
           </handler>
 
           <handler type="action" triggers="3">

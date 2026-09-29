@@ -670,10 +670,34 @@ You must fully embody this agent's persona and follow all activation instruction
 
           <handler type="action">
              If user selects option [6] (Send Back to Agent):
-             - Ask: "Which agent? [SCOUT/PROMPT/INV/SCRIPT/DIR/SCAV/ARCH]"
+
+             **USE THESE EXACT AGENT NAMES.** `auto_rework.py` parses this value to
+             decide which checkpoint to roll back. A name outside this list is NOT
+             silently ignored - the rework engine reports UNDETERMINED and the
+             pipeline halts, because an unroutable rejection must never be mistaken
+             for an approval.
+
+             Automated (the orchestrator can roll back and re-run these):
+               investigator | scriptwriter | narrator | director
+               visionary | scavenger | archivist
+             Manual only (no pipeline stage - the user re-runs these by hand):
+               topic_scout | prompt
+
+             - Ask: "Which agent? [investigator/scriptwriter/narrator/director/
+                     visionary/scavenger/archivist/topic_scout/prompt]"
              - Ask: "What should they fix?"
              - Update review_report.md with instructions
+             - Write review_result.json:
+               {"verdict": "REJECTED",
+                "failed_agents": [{"agent": "<exact name from the list above>",
+                                   "reason": "<what they must fix>"}],
+                "rerun_from": "<same name>"}
              - Display: "📤 Instructions saved. Run /{agent} to continue."
+
+             **Rolling back an agent discards every downstream artifact.** Sending
+             work back to the scriptwriter invalidates the direction, the visuals
+             and BOTH narration passes - say so before confirming, because the
+             final narration costs real money to re-render.
           </handler>
 
           <handler type="action">

@@ -21,6 +21,12 @@ The third theme is that **the pipeline stopped at text**. The Scriptwriter emitt
 
 This audit fixes the critical and high findings, and adds the missing stage: a **Narrator** agent that turns `voice_script.md` into a finished, timecoded voiceover track.
 
+**Round two (§7) audited the agents against each other** rather than each against its own file, and found a worse defect than F1: **an EIC rejection could be read as an approval**. `auto_rework` returned the same value for "approved" and "I could not work out what happened", and the orchestrator treated silence as a pass. Five of six failure fixtures — a missing verdict file, malformed JSON, an unrecognised agent name, a rejection naming no agent, and the abbreviations the EIC's own prompt tells it to use — all printed `[OK]` and exited 0. The pipeline failed open, on the one control that exists to stop bad work shipping. It now fails closed.
+
+Round two also found that **the two halves of the pipeline disagreed about how fast people talk**, in a way that made the narration gate reject correct Telugu and Hindi scripts, and that `narration_cues.md` — the whole reason the free draft render exists — had no reader.
+
+**§8 revises the TTS choice for long scripts on modest hardware:** **Kokoro-82M**, Apache-2.0, 300 MB, CPU-only, UTMOS 4.44, zero cost per render, with Sarvam retained for Telugu.
+
 ### Findings at a glance
 
 | # | Severity | Finding | Status |
@@ -37,6 +43,12 @@ This audit fixes the critical and high findings, and adds the missing stage: a *
 | F10 | 🟡 Medium | No tests, no CI | **27-test suite added** |
 | F11 | 🟡 Medium | `ensure_config_sync` rewrites shared config by line-prefix string replacement | **Documented** |
 | F12 | 🟡 Medium | Bare `except:` in `article_screenshotter.py`; dead Nitter dependency | **Documented** |
+| F13 | 🔴 Critical | An EIC *rejection* could be read as an approval — the pipeline failed open | **Fixed** |
+| F14 | 🟠 High | The EIC's agent vocabulary matched nothing the rework engine knew | **Fixed** |
+| F15 | 🟠 High | Two different words-per-minute tables — the gate rejected correct Telugu/Hindi scripts | **Fixed** |
+| F16 | 🟡 Medium | `/visionary` and `/narrator` had no inbound handoff; `narration_cues.md` had no reader | **Fixed** |
+| F17 | 🟡 Medium | Menu items without `triggers=`; dead letter-codes in `seo.md` / `thumbnail.md` | **Partially fixed** |
+| F18 | 🟡 Medium | Piper profile claimed an MIT licence that no longer applies | **Fixed** |
 
 ---
 
@@ -374,7 +386,231 @@ start_videonut.bat                    %~dp0-relative; narration menu entry
 
 ---
 
-## 7. Recommended next steps
+---
+
+## 7. Round two — inter-agent consistency
+
+The first pass audited each agent against its own file. This pass audited the agents
+**against each other**: what one writes versus what the next one reads, what the EIC
+emits versus what the rework engine accepts, and what two halves of the pipeline
+believe about the same number.
+
+Every finding below is a place where two components were individually correct and
+jointly wrong.
+
+### F13 — 🔴 The pipeline failed open on review
+
+This is the most serious defect found in either pass.
+
+`auto_rework.parse_review_result()` returned `None` to mean "approved". It also
+returned `None` when `review_result.json` was missing, when it was malformed, when
+the EIC named an agent it did not recognise, and when a rejection carried no agent at
+all. The orchestrator's only test was:
+
+```python
+if rerun_stage:
+    ...rework...
+else:
+    print("[SUCCESS] EIC APPROVED!")
+```
+
+So *absence of evidence was treated as approval*. I reproduced it with six fixtures:
+**five of the six failure modes printed `[OK] Rework not required` and exited 0.**
+The one that worked was the single case where the EIC happened to spell the agent
+name exactly as the engine expected.
+
+Concretely: if the EIC crashed before writing its verdict, VideoNut announced the
+video was approved. And since v1.5 added the Narrator, it would then spend real money
+rendering final narration for a script no one had signed off.
+
+**Fix.** The two states are now distinct at all three layers:
+
+| Layer | Before | After |
+|---|---|---|
+| `parse_review_result` | `None` for both | returns a stage, or raises `UndeterminedVerdict` |
+| stdout contract | `RERUN_STAGE:` or silence | always one of `REVIEW_STATUS:APPROVED\|REWORK\|UNDETERMINED` |
+| orchestrator | `if rerun_stage: … else: approved` | approval must be *stated*; `UNDETERMINED` halts and returns `False` |
+
+Exit code for an unresolvable verdict is now `2`, not `0`. Checkpoints are left
+untouched so `--resume` picks up cleanly once the verdict is fixed.
+
+### F14 — 🟠 The EIC spoke a language the rework engine did not
+
+`eic.md` asked `"Which agent? [SCOUT/PROMPT/INV/SCRIPT/DIR/SCAV/ARCH]"`.
+`AGENT_TO_STAGE` contained only canonical lowercase names. **Not one of those seven
+abbreviations was a key.** Every send-back therefore hit the `None` path above and was
+reported as an approval.
+
+The list was also missing VISIONARY, SEO, THUMBNAIL and NARRATOR entirely — four
+agents the EIC scores but could not route work back to.
+
+**Fix.** `AGENT_TO_STAGE` now accepts abbreviations, canonical names and common
+aliases. `topic_scout` and `prompt` have no automated stage, so they live in
+`MANUAL_ONLY_AGENTS` and produce an explicit "re-run this by hand" message instead of
+a silent pass. `eic.md` now lists the exact accepted names, documents the
+`review_result.json` shape it must write, and warns that rolling back invalidates
+downstream narration. A test asserts the two vocabularies stay in sync.
+
+### F15 — 🟠 Two words-per-minute tables, and the Indic scripts paid for it
+
+The scriptwriter sizes a script with one table. The narrator measures it with another.
+They disagreed:
+
+| Language | Agents said | Normalizer said |
+|---|---|---|
+| English | 135 | 150 |
+| Telugu | 110 | 125 |
+| Hindi | 115 | 135 |
+| Others | 120 | 140 |
+
+A *correctly sized* script then failed the ±10% narration gate:
+
+| Language | Target words | Estimated runtime | Drift | Gate |
+|---|---|---|---|---|
+| English | 2,025 | 13.5 min | −10.0% | borderline |
+| Telugu | 1,650 | 13.2 min | −12.0% | **FAIL** |
+| Hindi | 1,725 | 12.8 min | −14.8% | **FAIL** |
+| Marathi / Bengali | 1,800 | 13.3 min | −11.1% | **FAIL** |
+
+The gate rejected correct Telugu and Hindi scripts — precisely the languages this
+project targets. English squeaked through on the boundary, which is why it had not
+been noticed.
+
+**Fix.** `WPM_BY_LANGUAGE` in `script_normalizer.py` is now the single source of truth
+and matches the agents (135 / 115 / 110 / 120). `LIFECYCLE.md`'s flat "Duration × 135"
+rule has been replaced with the per-language table and an explanation of why Indian
+languages need a lower rate. A regression test reads all four files and fails if any
+one of them drifts.
+
+### F16 — 🟡 Orphaned agents and write-only artifacts
+
+Tracing "who names whom as the next step" left two agents unreachable and three files
+with no reader:
+
+| Orphan | Problem |
+|---|---|
+| `/visionary` | No agent ever tells the user to run it (pre-existing) |
+| `/narrator` | Same — introduced by v1.5's own work |
+| `narration_cues.md` | **Zero readers.** The Director was never told to time shots against it |
+| `visual_prompts.md` | Only the EIC's existence check; the Visionary's images never reach `asset_manifest.md` |
+| `youtube_optimization.md` | No readers, and absent from the EIC's audit table |
+
+`narration_cues.md` is the important one. The entire justification for the free draft
+narration pass is that the Director should cut to **measured** speech durations rather
+than a words-per-minute guess — and nothing instructed it to.
+
+**Fix.** The Scriptwriter now hands off to `/narrator` (draft), the Director now reads
+`narration_cues.md` as its timing source, warns loudly when it is falling back to
+estimates, reconciles disagreements over 10% in favour of the measurement, and hands
+off to `/visionary`. `visual_prompts.md` and `youtube_optimization.md` remain open
+items — see §9.
+
+### F17 — 🟡 The menu/handler contract is only half-enforced
+
+`eic.md` has eight menu items but only handler `[1]` carries a `triggers=` attribute;
+`[2]`–`[6]` are bare `<handler type="action">` identified by prose, appear out of order
+(…4, 6, 5), and `[7] Dismiss` / `[8] Redisplay` have no handler at all. `seo.md` and
+`thumbnail.md` have **zero** `triggers` attributes and reference letter codes `[OS]`
+and `[CT]` that appear in no menu — the same dead convention already removed from the
+user guide. Partially addressed; the full sweep is an open item.
+
+### F18 — 🟡 A licence claim that expired
+
+`providers.py` described Piper as "Local MIT-licensed neural TTS". `rhasspy/piper` was
+archived in October 2025; the maintained fork `OHF-Voice/piper1-gpl` is **GPL-3.0**.
+For a package distributed on npm that distinction matters. The note now states it
+plainly, and a test guards against the old wording returning.
+
+---
+
+## 8. Revised TTS recommendation — long scripts, low compute
+
+The original selection optimised for quality with cost as a secondary concern. Re-run
+against the real workload — **15–20 minute scripts, rendered often, on modest
+hardware** — the answer changes.
+
+**What a 15–20 minute script actually is:**
+
+| Length | Words (@135 wpm) | Characters |
+|---|---|---|
+| 15 min | ~2,025 | ~12,150 |
+| 20 min | ~2,700 | ~16,200 |
+
+And at catalogue scale (~1,020 minutes of finished video ≈ 826,000 characters):
+
+| Provider | Cost for ~826k chars | Notes |
+|---|---|---|
+| ElevenLabs v3 | ~$83 | best quality, per-render billing |
+| Gemini Flash TTS | ~$14 | good value |
+| Sarvam `bulbul:v3` | ~₹2,480 (~$29) | the only strong Telugu option |
+| **Kokoro-82M** | **$0** | local, offline, unlimited re-renders |
+
+### Selected: Kokoro-82M for English
+
+| | |
+|---|---|
+| Parameters | 82M (StyleTTS2 + ISTFTNet) |
+| Size | ~300 MB (164 MB FP16) |
+| Licence | **Apache-2.0** — safe to ship |
+| Hardware | **CPU, ~2 GB RAM. No GPU.** |
+| Measured speed | RTF ≈ 0.57–0.67 → **1.5–1.8× real-time** |
+| Quality (UTMOS) | **4.44–4.46** — highest of any CPU-class model |
+| Cost | zero, forever |
+
+A 15-minute narration renders in roughly 8–10 minutes on a plain CPU; 20 minutes in
+about 11–13. That is slower than an API call and free, repeatable and offline —
+which is the right trade when you re-render after every script revision.
+
+I have quoted the **measured** real-time factor, not the 3–11× figures in vendor
+material. Those come from batch throughput on server hardware.
+
+**Both of Kokoro's documented weaknesses are already neutralised by VideoNut's
+design:**
+
+1. *510-token cap per call* — the engine already chunks at sentence boundaries and
+   splices with ffmpeg. The `kokoro` profile sets `max_chars=400`, comfortably under.
+2. *Drift at paragraph boundaries in sustained 10-minute single-shot generation* —
+   VideoNut never does single-shot generation. Every chunk is an independent render.
+
+The weakness that **does** remain: narrow emotional range (~6.5/10) and no voice
+cloning. For an authoritative documentary read — measured, even, credible — that
+narrowness is closer to an asset than a defect. For character work or dramatic
+delivery, use ElevenLabs.
+
+### Telugu is the exception
+
+Kokoro's only Indian language is Hindi. `check_ready()` therefore **refuses** Telugu
+rather than mangling it, and names Sarvam in the error. The CPU alternative,
+Indic Parler-TTS (Apache-2.0, 22 languages including `te-IN`), needs ~4–6 GB RAM —
+heavier than Kokoro and heavier than most laptops enjoy. IndicF5 covers Telugu too but
+has a documented duration bug (21 of 30 outputs silent or truncated) and is
+gated on Hugging Face; I do not recommend it.
+
+**So: Kokoro for English, Sarvam for Telugu, and the router picks automatically.**
+
+### How to turn it on
+
+```yaml
+# config.yaml
+voice:
+  prefer_local: true     # puts Kokoro at the front of the auto chain
+```
+
+```bash
+pip install kokoro-onnx soundfile    # ~300 MB on first run, no key, no GPU
+```
+
+Two runtimes are supported and tried in order: `kokoro-onnx` (no PyTorch, smallest,
+fastest on CPU) then the reference `kokoro` package. Both are imported lazily, so the
+module still loads with neither installed and `check_ready()` explains what to do.
+
+Draft passes now use a dedicated free chain — `kokoro → piper → edge → mock` — so a
+timing render can never reach for a paid API. A test asserts every provider in that
+chain costs `$0.00` per 1,000 characters.
+
+---
+
+## 9. Recommended next steps
 
 Not done here, in priority order:
 
@@ -385,3 +621,7 @@ Not done here, in priority order:
 5. **Rewrite `USER_GUIDE.md`** end to end; it is the most-read and least-accurate file in the repository.
 6. **Retire or replace `social_media_reader.py`** — its Nitter backend no longer exists.
 7. **Add a Music/SFX agent.** With narration timecodes now exact, scoring a bed against `narration_cues.md` is a small, well-defined next stage.
+8. **Finish F17** — give every menu item a `triggers=` attribute, reorder the handlers, and delete the dead `[OS]`/`[CT]` letter codes.
+9. **Give `visual_prompts.md` a consumer** — the Archivist should fold the Visionary's generated images into `asset_manifest.md`; today they reach the EIC's existence check and stop.
+10. **Add `youtube_optimization.md` to the EIC audit table** so the SEO agent's output is reviewed rather than merely produced.
+11. **Ship a Kokoro smoke test in CI** behind an opt-in flag, so the local path is exercised on a real render and not only through `check_ready()`.

@@ -190,6 +190,7 @@ def voice_config(config: Dict) -> Dict:
         "enabled": True,
         "provider": "auto",
         "draft_provider": "auto",
+        "prefer_local": False,
         "model": "",
         "voice": "",
         "pace": 1.0,
@@ -307,15 +308,17 @@ class VoiceEngine:
         if not name:
             key = "draft_provider" if mode == "draft" else "provider"
             name = str(self.vcfg.get(key) or "auto").strip().lower()
+        prefer_local = bool(self.vcfg.get("prefer_local"))
         if name in ("", "auto"):
             chain = self.vcfg.get("fallback_chain") or None
             if mode == "draft" and not chain:
-                chain = ["edge", "piper", "sarvam", "gemini", "openai", "elevenlabs", "mock"]
-            return P.resolve_auto_provider(self.language, chain)
+                # A draft is a stopwatch, not a performance. Never bill an API for it.
+                chain = list(P.DRAFT_CHAIN)
+            return P.resolve_auto_provider(self.language, chain, prefer_local=prefer_local)
         ready, why = P.get_provider(name, P.ProviderSettings(language=self.language)).check_ready()
         if not ready:
             fallback, reason = P.resolve_auto_provider(
-                self.language, self.vcfg.get("fallback_chain") or None
+                self.language, self.vcfg.get("fallback_chain") or None, prefer_local=prefer_local
             )
             self.warnings.append(f"Provider '{name}' is not usable: {why}")
             return fallback, f"'{name}' unavailable ({why}); {reason}"

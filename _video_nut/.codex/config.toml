@@ -1,0 +1,11 @@
+# OpenAI Codex Desktop App Project Configuration
+[project]
+name = "videonut"
+trusted = true
+default_model = "gpt-4o"
+
+[sandbox]
+allow_bash = true
+allow_read = true
+allow_edit = true
+allow_websearch = true

@@ -676,10 +676,30 @@ We are specifying the URLs and time ranges for the clips to be trimmed by the Ar
             )
             
             rerun_stage = None
-            for line in result.stdout.splitlines():
+            review_status = None
+            for line in (result.stdout or "").splitlines():
                 if line.startswith("RERUN_STAGE:"):
                     rerun_stage = line.replace("RERUN_STAGE:", "").strip()
-                    
+                elif line.startswith("REVIEW_STATUS:"):
+                    review_status = line.replace("REVIEW_STATUS:", "").strip().upper()
+
+            # FAIL CLOSED. Approval must be stated, never inferred from silence.
+            # Before v1.5.1 the only test was `if rerun_stage:` with an else-branch
+            # that printed "EIC APPROVED" - so a missing review_result.json, malformed
+            # JSON, an unrecognised verdict, or an agent name the rework engine did
+            # not know all resulted in an unreviewed video being declared finished
+            # (and, since v1.5, a paid narration render on top of it).
+            if review_status is None or review_status == "UNDETERMINED":
+                print("\n[FAIL] The EIC verdict could not be resolved. NOT treating this as approval.")
+                for line in (result.stdout or "").splitlines():
+                    if line.strip():
+                        print(f"  {line}")
+                if result.stderr:
+                    print(f"  STDERR: {result.stderr.strip()[:500]}")
+                print("\n  Fix the verdict and re-run with --resume. Checkpoints are untouched.")
+                print(f"  Verdict file: {os.path.join(self.project_path, 'review_result.json')}")
+                return False
+
             if rerun_stage:
                 # Reload checkpoints from disk to preserve the resets made by auto_rework.py
                 self.checkpoints = self.load_checkpoints()
@@ -697,6 +717,10 @@ We are specifying the URLs and time ranges for the clips to be trimmed by the Ar
                 print(f"\n[REWORK] EIC Rejected the audit. Triggering Rework Loop #{iterations + 1} starting from stage '{rerun_stage}'...")
                 # Loop back: re-run the pipeline from the rerun_stage
                 return "loop_back"
+            elif review_status == "REWORK":
+                # auto_rework said rework but could not emit a stage - do not proceed.
+                print("\n[FAIL] EIC requested rework but no stage was resolved.")
+                return False
             else:
                 print("\n[SUCCESS] EIC APPROVED! No rework required.")
                 self.checkpoints["rework_iterations"] = 0
