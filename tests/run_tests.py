@@ -747,6 +747,38 @@ def _():
 
 
 
+@test("hygiene: prepack build artifacts are not tracked in git")
+def _():
+    """
+    `prepack` stages the seven CLI folders into _video_nut/ so the tarball is
+    self-contained, and `postpack` deletes them. They are generated from the
+    identically named folders at the repo root.
+
+    Running `git add -A` while a pack is half-finished commits 76 generated
+    files; the next clean checkout then deletes them again, and the diff noise
+    hides real changes. It happened once. This stops it happening twice.
+    """
+    out = subprocess.run(["git", "ls-files"], cwd=REPO_ROOT,
+                         capture_output=True, text=True)
+    if out.returncode != 0:
+        raise Skip("not a git checkout")
+    tracked = out.stdout.splitlines()
+
+    staged_dirs = [".claude", ".gemini", ".qwen", ".opencode",
+                   ".hermes", ".codex", ".antigravity"]
+    for d in staged_dirs:
+        prefix = f"_video_nut/{d}/"
+        hits = [f for f in tracked if f.startswith(prefix)]
+        ok(not hits, f"{prefix} is a build artifact and must not be tracked "
+                     f"({len(hits)} files found; run `node _video_nut/scripts/prepack.js --clean`)")
+
+    for f in ("_video_nut/LICENSE", "_video_nut/CONTRIBUTING.md", "_video_nut/.env.example"):
+        ok(f not in tracked, f"{f} is staged by prepack from the repo root, not authored here")
+
+    ok(not [f for f in tracked if f.endswith(".tgz")], "no npm tarball is tracked")
+
+
+
 def main():
     print(f"\n{'=' * 68}")
     print("  VideoNut regression suite")

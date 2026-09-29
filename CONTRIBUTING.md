@@ -62,6 +62,37 @@ changes** — a skipped test proves nothing.
 
 ---
 
+## What CI checks
+
+`.github/workflows/ci.yml` runs on every push and pull request. Four jobs, each
+one guarding a defect that actually shipped in v1:
+
+| Job | What it does | The bug it prevents |
+|---|---|---|
+| `tests` | Runs the suite on Python 3.9 and 3.12, byte-compiles everything, and **fails if the audio tests were skipped** | A green suite that quietly tested nothing |
+| `package` | `npm run verify-package`, then packs the real tarball and asserts all seven CLI folders are inside it | The published package containing zero agents |
+| `agent-drift` | Re-runs `generate_agents.py` and fails if anything changed | Editing a persona and leaving seven stale compiled copies |
+| `hygiene` | No author-machine paths, no `.env`, no bytecode, no API-key-shaped strings | Absolute Windows drive paths from the author's machine shipped to users |
+
+Two of these deserve a note.
+
+**`agent-drift` is the one people trip over.** Agent personas live in
+`_video_nut/agents/**` and are *compiled* into eight CLI-specific folders. If you
+edit a persona and do not re-run the generator, seven copies keep the old text
+and only the CLI you happened to test behaves correctly. If this job fails, run:
+
+```bash
+python _video_nut/scratch/generate_agents.py
+```
+
+and commit the result.
+
+**`package` packs a real tarball rather than trusting `verify-package`.** Those
+two can disagree — the audit's worst packaging finding slipped through precisely
+because the staging step succeeded while the published artifact was still empty.
+
+---
+
 ## Never commit a secret
 
 `config.yaml` is committed, published to npm, and copied into every user's

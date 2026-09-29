@@ -6,10 +6,11 @@
 
 ### 🚀 Create Professional YouTube Documentaries with AI Agents
 
+[![CI](https://img.shields.io/github/actions/workflow/status/konda-vamshi-krishna/videonut/ci.yml?style=flat-square&logo=githubactions&logoColor=white&label=CI)](https://github.com/konda-vamshi-krishna/videonut/actions/workflows/ci.yml)
 [![NPM Version](https://img.shields.io/npm/v/videonut?style=flat-square&logo=npm&logoColor=white&label=npm&color=CB3837)](https://www.npmjs.com/package/videonut)
 [![GitHub Stars](https://img.shields.io/github/stars/konda-vamshi-krishna/videonut?style=flat-square&logo=github&color=yellow)](https://github.com/konda-vamshi-krishna/videonut)
 [![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
-[![Node](https://img.shields.io/badge/Node.js-16+-339933?style=flat-square&logo=node.js&logoColor=white)](https://nodejs.org)
+[![Node](https://img.shields.io/badge/Node.js-20+-339933?style=flat-square&logo=node.js&logoColor=white)](https://nodejs.org)
 
 **12 Specialized AI Agents** | **AI Voiceover Built In** | **Multi-CLI Support** | **Production-Ready Assets**
 

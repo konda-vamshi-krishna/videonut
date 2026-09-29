@@ -35,3 +35,23 @@ _video_nut/.env
 .tts_cache/
 Projects/*/.tts_cache/
 Projects/*/assets/audio/
+
+# Prepack build artifacts.
+# `npm run prepack` copies the seven CLI agent folders (plus LICENSE,
+# CONTRIBUTING.md and .env.example) from the repo root into _video_nut/ so the
+# published tarball is self-contained, and `postpack` deletes them again. They
+# are generated, never authored - the source of truth is the identically named
+# folder at the repo root. They were committed by accident once; ignoring them
+# keeps `git add -A` from re-tracking 76 generated files if you happen to run
+# it midway through a pack.
+_video_nut/.claude/
+_video_nut/.gemini/
+_video_nut/.qwen/
+_video_nut/.opencode/
+_video_nut/.hermes/
+_video_nut/.codex/
+_video_nut/.antigravity/
+_video_nut/LICENSE
+_video_nut/CONTRIBUTING.md
+_video_nut/.env.example
+_video_nut/*.tgz
