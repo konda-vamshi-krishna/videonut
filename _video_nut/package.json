@@ -1,6 +1,6 @@
 {
   "name": "videonut",
-  "version": "1.5.2",
+  "version": "1.5.3",
   "description": "AI-powered YouTube documentary production pipeline with 12 specialized agents for research, scripting, AI voiceover, and asset management",
   "keywords": [
     "youtube",

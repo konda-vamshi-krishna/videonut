@@ -870,6 +870,154 @@ def _():
 
 
 
+# ---------------------------------------------------------------------------
+# F16b - AI-generated assets reaching the manifest (added v1.5.3)
+# ---------------------------------------------------------------------------
+
+
+def _ar():
+    sys.path.insert(0, VALIDATORS)
+    import importlib
+    return importlib.import_module("asset_reconciler")
+
+
+PROMPTS_FIXTURE = """# AI Visual Prompts: Test
+
+## Style & Cinematography Guide
+- **Aspect Ratio**: --ar 16:9
+
+---
+
+## Scene 1: The Vault (AI IMAGE)
+- **Target Tool**: Flux
+
+## Scene 2: The Ledger (AI IMAGE)
+- **Target Tool**: Midjourney v6
+
+## Scene 5: Rising Tide (AI VIDEO)
+- **Target Tool**: Sora
+- **Duration** (If Video): 5s
+"""
+
+
+def _make_project(files=()):
+    d = tempfile.mkdtemp(prefix="vn_assets_")
+    gen = os.path.join(d, "assets", "generated")
+    os.makedirs(gen, exist_ok=True)
+    with open(os.path.join(d, "visual_prompts.md"), "w", encoding="utf-8") as fh:
+        fh.write(PROMPTS_FIXTURE)
+    for name, content in files:
+        with open(os.path.join(gen, name), "wb") as fh:
+            fh.write(content)
+    return d
+
+
+@test("assets: every scene declared in visual_prompts.md is parsed")
+def _():
+    ar = _ar()
+    d = _make_project()
+    try:
+        scenes = ar.parse_visual_prompts(os.path.join(d, "visual_prompts.md"))
+        eq([s["scene"] for s in scenes], [1, 2, 5], "scene numbers")
+        eq(scenes[0]["title"], "The Vault", "scene 1 title")
+        eq(scenes[2]["kind"], "VIDEO", "a scene with a Duration line is a VIDEO")
+        eq(scenes[0]["kind"], "IMAGE", "a scene without one is an IMAGE")
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+@test("assets: a prompted shot with no generated file is reported missing")
+def _():
+    """
+    This is the whole point. Before this, a shot could be prompted, never
+    generated, and simply not appear in the delivered edit with nothing saying so.
+    """
+    ar = _ar()
+    d = _make_project([("scene_01_vault.png", b"x")])
+    try:
+        result, err = ar.reconcile(d)
+        eq(err, None, "reconcile succeeded")
+        eq(result["complete"], False, "an incomplete set is not complete")
+        eq(sorted(m["scene"] for m in result["missing"]), [2, 5], "scenes 2 and 5 are missing")
+        eq([m["scene"] for m in result["matched"]], [1], "scene 1 matched")
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+@test("assets: filenames match with or without zero padding, and 0-byte exports do not count")
+def _():
+    ar = _ar()
+    d = _make_project([
+        ("scene_01_vault.png", b"x"),
+        ("scene_2_ledger.png", b"x"),        # unpadded
+        ("scene_05_tide.mp4", b""),          # failed export
+    ])
+    try:
+        result, _ = ar.reconcile(d)
+        eq(sorted(m["scene"] for m in result["matched"]), [1, 2], "padded and unpadded both match")
+        eq([m["scene"] for m in result["missing"]], [5], "a 0-byte export is not an asset")
+        ok(any("0 bytes" in o["reason"] for o in result["orphans"]),
+           "the 0-byte file is reported as an orphan, not silently dropped")
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+@test("assets: misnamed and undeclared files are surfaced as orphans")
+def _():
+    ar = _ar()
+    d = _make_project([
+        ("scene_01_vault.png", b"x"), ("scene_02_ledger.png", b"x"),
+        ("scene_05_tide.mp4", b"x"),
+        ("final_render.png", b"x"),          # no scene prefix
+        ("scene_09_stray.png", b"x"),        # not declared
+    ])
+    try:
+        result, _ = ar.reconcile(d)
+        eq(result["complete"], True, "all declared shots are present")
+        reasons = " ".join(o["reason"] for o in result["orphans"])
+        ok("does not start with" in reasons, "a misnamed file is flagged")
+        ok("not declared" in reasons, "an undeclared scene is flagged")
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+@test("assets: --write folds generated shots into asset_manifest.md idempotently")
+def _():
+    ar = _ar()
+    d = _make_project([("scene_01_vault.png", b"x")])
+    try:
+        with open(os.path.join(d, "asset_manifest.md"), "w", encoding="utf-8") as fh:
+            fh.write("# Asset Manifest\n\n## Ready to Download\n| 3 | Archive | url |\n")
+        result, _ = ar.reconcile(d)
+        for _i in range(3):
+            ar.write_manifest_section(d, result)
+        body = open(os.path.join(d, "asset_manifest.md"), encoding="utf-8").read()
+        eq(body.count(ar.MANIFEST_HEADING), 1, "the section is written exactly once")
+        ok("Archive" in body, "pre-existing manifest content survives")
+        ok("scene_01_vault.png" in body, "the generated file is listed")
+        ok("NOT GENERATED" in body, "the missing shots are listed too")
+
+        ar.write_manual_required(d, result)
+        mr = open(os.path.join(d, "MANUAL_REQUIRED.txt"), encoding="utf-8").read()
+        ok("Scene 2" in mr, "missing shots reach MANUAL_REQUIRED.txt")
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+@test("assets: the Visionary states where files go and the Archivist reconciles them")
+def _():
+    vis = open(os.path.join(VN, "agents", "creative", "visionary.md"), encoding="utf-8").read()
+    arc = open(os.path.join(VN, "agents", "technical", "archivist.md"), encoding="utf-8").read()
+    eic = open(os.path.join(VN, "agents", "core", "eic.md"), encoding="utf-8").read()
+
+    ok("assets/generated" in vis, "the Visionary names the output folder")
+    ok("scene_" in vis, "the Visionary states the naming convention")
+    ok("asset_reconciler" in arc, "the Archivist runs the reconciler")
+    ok("--write" in arc, "the Archivist writes results into the manifest")
+    ok("asset_reconciler" in eic, "the EIC verifies generated coverage mechanically")
+
+
+
 def main():
     print(f"\n{'=' * 68}")
     print("  VideoNut regression suite")

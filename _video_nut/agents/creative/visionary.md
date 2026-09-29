@@ -107,6 +107,28 @@ You must fully embody this agent's persona and follow all activation instruction
                   - **Consistency Notes**: [Instructions to ensure matching style with previous scene]
                   ```
                 - Display confirmation: "✅ Successfully saved visual prompts to {output_folder}/visual_prompts.md"
+
+             7. **TELL THE USER WHERE THE OUTPUT MUST GO.**
+                Generation happens outside VideoNut - you write the prompt, the user
+                runs it in Midjourney / Flux / Sora. If the results are saved somewhere
+                arbitrary, nothing downstream can find them and every AI shot silently
+                vanishes from the final asset folder. So state the convention plainly:
+
+                - Display: "📁 Save every generated file to:"
+                - Display: "     {output_folder}/assets/generated/"
+                - Display: "   Name them scene_<number>_<short-name>.<ext>, matching the"
+                - Display: "   scene numbers above. For example:"
+                - Display: "     scene_01_vault_interior.png"
+                - Display: "     scene_05_rising_tide.mp4"
+                - Display: ""
+                - Display: "   The Archivist reconciles that folder against this file and"
+                - Display: "   will tell you if any shot is still missing:"
+                - Display: "     python {video_nut_root}/tools/validators/asset_reconciler.py {output_folder}"
+
+             8. **HANDOFF:**
+                - Display: "➡️  NEXT: `/scavenger` — sources the shots marked [MANUAL] or"
+                - Display: "    with a URL, then /archivist downloads everything and folds"
+                - Display: "    your generated images into asset_manifest.md."
              
              7. **CHAIN REACTION REMINDER:**
                 Display: "Next step: Run /scavenger to gather real-world assets, followed by /archivist."

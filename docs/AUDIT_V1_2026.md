@@ -47,6 +47,7 @@ Round two also found that **the two halves of the pipeline disagreed about how f
 | F14 | 🟠 High | The EIC's agent vocabulary matched nothing the rework engine knew | **Fixed** |
 | F15 | 🟠 High | Two different words-per-minute tables — the gate rejected correct Telugu/Hindi scripts | **Fixed** |
 | F16 | 🟡 Medium | `/visionary` and `/narrator` had no inbound handoff; `narration_cues.md` had no reader | **Fixed** |
+| F19 | 🟠 High | AI-generated shots were prompted, generated, then silently dropped before delivery | **Fixed** |
 | F17 | 🟡 Medium | Menu items without `triggers=`; dead letter-codes in `seo.md` / `thumbnail.md` | **Partially fixed** |
 | F18 | 🟡 Medium | Piper profile claimed an MIT licence that no longer applies | **Fixed** |
 
@@ -527,8 +528,63 @@ than a words-per-minute guess — and nothing instructed it to.
 **Fix.** The Scriptwriter now hands off to `/narrator` (draft), the Director now reads
 `narration_cues.md` as its timing source, warns loudly when it is falling back to
 estimates, reconciles disagreements over 10% in favour of the measurement, and hands
-off to `/visionary`. `visual_prompts.md` and `youtube_optimization.md` remain open
-items — see §9.
+off to `/visionary`. `visual_prompts.md` became F19 below.
+
+### F19 — 🟠 Every AI shot was generated and then thrown away
+
+Tracing `visual_prompts.md` to its consumer turned a "medium, tidy this up later" item
+into the worst *user-visible* defect in the repository.
+
+The chain was supposed to be:
+
+1. The Director tags shots it wants created rather than sourced: `**Source:** [CREATE]`.
+2. The Visionary turns each into a pasteable prompt in `visual_prompts.md`.
+3. The user generates the image or clip in Midjourney / Flux / Sora — an external,
+   manual step VideoNut does not automate.
+4. …and then nothing.
+
+There was no agreed location for the generated files, no entry for them in
+`asset_manifest.md` (which only ever held downloadable URLs), and no check that they
+existed. The Archivist downloaded the Scavenger's URLs into `assets/` and declared the
+job done.
+
+So on a documentary with, say, twelve `[CREATE]` shots, the user wrote twelve prompts,
+generated twelve images by hand, and received a final asset folder containing **none of
+them** — with nothing anywhere recording that they were missing. The work was done and
+then discarded at the last step.
+
+**Fix.** A new `tools/validators/asset_reconciler.py` reconciles the two sides
+mechanically — scenes declared in `visual_prompts.md` against files present in
+`assets/generated/`:
+
+```
+  Declared in visual_prompts.md : 3
+  Present in assets/generated   : 2
+  Missing                       : 1
+  [OK]   Scene  1 (IMAGE) The Vault          scene_01_vault.png
+  [OK]   Scene  5 (VIDEO) Rising Tide        scene_5_tide.mp4
+  [MISS] Scene  2 (IMAGE) The Ledger         expected assets/generated/scene_02_*
+  [ORPH] assets/generated/scene_09_stray.png - scene 9 is not declared
+```
+
+`--write` folds the results into `asset_manifest.md` under a `🎨 AI-Generated Assets`
+section (idempotently — it replaces its own section rather than appending a new one
+each run) and logs anything missing to `MANUAL_REQUIRED.txt`.
+
+Three deliberate details:
+
+- **A 0-byte file is not an asset.** Failed exports are common and would otherwise
+  satisfy a naive existence check.
+- **Orphans are reported, not ignored.** A misnamed file usually means a real asset is
+  sitting there unused, which is a more likely mistake than a missing one.
+- **Both `scene_01_` and `scene_1_` match.** Insisting on zero padding would fail on
+  half of what generation tools emit.
+
+Wired at all three points: the Visionary now states the folder and naming convention at
+the moment it hands over the prompts, the Archivist runs the reconciler before
+downloading, and the EIC verifies coverage mechanically rather than eyeballing the
+prompt file. `youtube_optimization.md` and `assets/generated/` were also added to the
+EIC's file-existence table, closing the last of the orphaned-artifact findings.
 
 ### F17 — 🟡 The menu/handler contract is only half-enforced
 
@@ -647,6 +703,6 @@ Not done here, in priority order:
 6. **Retire or replace `social_media_reader.py`** — its Nitter backend no longer exists.
 7. **Add a Music/SFX agent.** With narration timecodes now exact, scoring a bed against `narration_cues.md` is a small, well-defined next stage.
 8. **Finish F17** — give every menu item a `triggers=` attribute, reorder the handlers, and delete the dead `[OS]`/`[CT]` letter codes.
-9. **Give `visual_prompts.md` a consumer** — the Archivist should fold the Visionary's generated images into `asset_manifest.md`; today they reach the EIC's existence check and stop.
-10. **Add `youtube_optimization.md` to the EIC audit table** so the SEO agent's output is reviewed rather than merely produced.
+9. ~~**Give `visual_prompts.md` a consumer**~~ **Done in v1.5.3** — see F19 above.
+10. ~~**Add `youtube_optimization.md` to the EIC audit table**~~ **Done in v1.5.3** — added alongside `assets/generated/`.
 11. **Ship a Kokoro smoke test in CI** behind an opt-in flag, so the local path is exercised on a real render and not only through `check_ready()`.

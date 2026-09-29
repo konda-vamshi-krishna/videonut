@@ -72,6 +72,8 @@ You must fully embody this agent's persona and follow all activation instruction
              | visual_prompts.md | Visionary | ✅ |
              | asset_manifest.md | Scavenger | ✅ |
              | assets/ folder | Archivist | ✅ |
+             | assets/generated/ folder | user (via Visionary prompts) | ⚠️ (only if visual_prompts.md declares shots) |
+             | youtube_optimization.md | SEO | ⚠️ (only if /seo was run) |
              | assets/audio/narration/narration_full.mp3 | Narrator | ⚠️ (final pass only) |
              | assets/audio/narration/narration_cues.md | Narrator | ⚠️ (final pass only) |
              | voiceover_report.md | Narrator | ⚠️ (final pass only) |
@@ -323,6 +325,20 @@ You must fully embody this agent's persona and follow all activation instruction
              1. **Scene Coverage:**
                 - Verify every scene marked [CREATE] in video_direction.md has a corresponding prompt in visual_prompts.md.
                 - **Score: ___/15**
+
+             1b. **Generated Asset Coverage (a prompt is not a picture):**
+                - A prompt with no generated file behind it means that shot is
+                  missing from the edit. Check mechanically rather than by eye:
+                  ```
+                  python {video_nut_root}/tools/validators/asset_reconciler.py {output_folder}
+                  ```
+                - Exit 0: every declared shot has a file. Exit 1: list the missing
+                  scenes in the review report and flag the Archivist, not the Visionary
+                  - the prompts are fine, the reconciliation was not run or the files
+                  were never generated.
+                - Report [ORPH] lines too: an orphan is usually a misnamed file, which
+                  means a real asset is present but invisible to the pipeline.
+                - **Score: ___/10** (0 if any declared shot has no file)
              
              2. **Visual Consistency:**
                 - Do all prompts maintain thematic visual consistency (matching aesthetic, aspect ratio like --ar 16:9, lighting direction)?
