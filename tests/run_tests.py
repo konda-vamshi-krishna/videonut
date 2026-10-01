@@ -16,6 +16,7 @@ Exit code 0 = all green.
 
 import json
 import os
+import pathlib
 import shutil
 import subprocess
 import sys
@@ -1015,6 +1016,147 @@ def _():
     ok("asset_reconciler" in arc, "the Archivist runs the reconciler")
     ok("--write" in arc, "the Archivist writes results into the manifest")
     ok("asset_reconciler" in eic, "the EIC verifies generated coverage mechanically")
+
+
+
+# ---------------------------------------------------------------------------
+# Round 3 - agent/user communication and the word-count gate (v1.5.4)
+# ---------------------------------------------------------------------------
+
+
+@test("word target: computed from the canonical WPM table, not guessed")
+def _():
+    sys.path.insert(0, os.path.join(VN, "tools"))
+    import importlib
+    wt = importlib.import_module("word_target")
+    from script_normalizer import WPM_BY_LANGUAGE
+
+    for lang in ("english", "telugu", "hindi"):
+        eq(wt.wpm_for(lang), WPM_BY_LANGUAGE[lang],
+           f"word_target uses the normalizer's {lang} rate")
+
+    r = wt.compute(15, "English")
+    eq(r["target_word_count"], 2025, "15 min English")
+    eq(r["min_acceptable"], 1822, "lower bound is -10%")
+    eq(r["max_acceptable"], 2228, "upper bound is +10%")
+    eq(wt.compute(15, "Telugu")["target_word_count"], 1650, "15 min Telugu")
+    eq(wt.compute(20, "Hindi")["target_word_count"], 2300, "20 min Hindi")
+    # An unknown language must fall back, not crash.
+    eq(wt.compute(10, "Klingon")["wpm"], WPM_BY_LANGUAGE["default"], "unknown -> default")
+
+
+@test("word target: the correct Telugu script that used to be rejected now passes")
+def _():
+    """
+    A correctly sized 15-minute Telugu script is 1,650 words. Under the old
+    mismatched tables it was measured as 12% short and the gate failed it.
+    """
+    sys.path.insert(0, os.path.join(VN, "tools"))
+    import importlib
+    wt = importlib.import_module("word_target")
+
+    passed, r = wt.check(1650, 15, "Telugu")
+    eq(passed, True, "a correct Telugu script passes")
+    eq(r["drift_pct"], 0.0, "and sits exactly on target")
+
+    passed, _ = wt.check(1200, 15, "Telugu")
+    eq(passed, False, "a genuinely short script still fails")
+    passed, _ = wt.check(2600, 15, "Telugu")
+    eq(passed, False, "a genuinely long script still fails")
+
+    for bad in (0, -5, "abc"):
+        raised = False
+        try:
+            wt.compute(bad, "English")
+        except ValueError:
+            raised = True
+        ok(raised, f"a nonsense duration {bad!r} raises rather than returning garbage")
+
+
+@test("comms: every agent honours communication_language and keeps it distinct from audio_language")
+def _():
+    """
+    config.yaml exposes communication_language - the language agents should SPEAK
+    TO THE USER in. It was read by zero agents, and the Topic Scout overwrote it
+    with audio_language, so the setting was both ignored and silently discarded.
+    """
+    agents = [f for f in pathlib.Path(os.path.join(VN, "agents")).rglob("*.md")
+              if f.name != "self_review_protocol.md"]
+    ok(len(agents) >= 12, f"found the agent roster ({len(agents)})")
+    for f in agents:
+        body = f.read_text(encoding="utf-8")
+        ok("communication_language" in body,
+           f"{f.name} reads communication_language")
+        ok("audio_language" in body,
+           f"{f.name} also knows about audio_language (they are different fields)")
+
+    scout = open(os.path.join(VN, "agents", "research", "topic_scout.md"),
+                 encoding="utf-8").read()
+    ok('communication_language: "{audio_language}"' not in scout,
+       "the Topic Scout no longer overwrites communication_language with audio_language")
+
+
+@test("comms: the word-count target is computed by the tool, not by agent arithmetic")
+def _():
+    scout = open(os.path.join(VN, "agents", "research", "topic_scout.md"),
+                 encoding="utf-8").read()
+    ok("word_target.py" in scout, "the Topic Scout calls the tool")
+    ok("target_duration × 135" not in scout,
+       "the hand-multiplication table is gone from the Topic Scout")
+
+    eic = open(os.path.join(VN, "agents", "core", "eic.md"), encoding="utf-8").read()
+    ok("word_target.py" in eic, "the EIC re-verifies the target before judging against it")
+
+
+@test("comms: no agent is orphaned - every one is reachable from another")
+def _():
+    """
+    /seo had zero inbound references: nothing ever told the user to run it, so
+    youtube_optimization.md was produced only if the user already knew to ask.
+    """
+    import re
+    agents_dir = pathlib.Path(os.path.join(VN, "agents"))
+    names = {f.stem for f in agents_dir.rglob("*.md")} - {"self_review_protocol"}
+    # prompt_agent is registered as the /prompt command
+    commands = {n.replace("prompt_agent", "prompt") for n in names}
+
+    body = "\n".join(f.read_text(encoding="utf-8") for f in agents_dir.rglob("*.md"))
+    for cmd in sorted(commands):
+        if cmd == "topic_scout":
+            continue  # the entry point; nothing precedes it
+        hits = len(re.findall(r"/" + cmd + r"\b", body))
+        ok(hits >= 1, f"/{cmd} is named as a next step somewhere ({hits} refs)")
+
+
+
+@test("packaging: every tool on disk is actually shipped in the package")
+def _():
+    """
+    package.json files[] used to whitelist tools/ SUBDIRECTORIES plus two
+    hand-listed root files. A new tool added at tools/<name>.py was therefore
+    silently excluded from the tarball - the user would get an agent prompt
+    telling them to run a file that does not exist on their machine.
+
+    That is the F1 failure mode exactly: the package promises something the
+    published artifact does not contain, and nothing notices.
+    """
+    import json
+    pkg = json.load(open(os.path.join(VN, "package.json"), encoding="utf-8"))
+    files = pkg.get("files", [])
+
+    ships_all_tools = "tools/" in files or "tools" in files
+    if not ships_all_tools:
+        on_disk = {str(p.relative_to(VN)).replace("\\", "/")
+                   for p in pathlib.Path(os.path.join(VN, "tools")).rglob("*.py")}
+        covered = set()
+        for entry in files:
+            e = entry.rstrip("/")
+            for f in on_disk:
+                if f == e or f.startswith(e + "/"):
+                    covered.add(f)
+        missing = sorted(on_disk - covered)
+        ok(not missing,
+           f"these tools exist but package.json would not ship them: {missing}")
 
 
 

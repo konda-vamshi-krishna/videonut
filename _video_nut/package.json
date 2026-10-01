@@ -1,6 +1,6 @@
 {
   "name": "videonut",
-  "version": "1.5.3",
+  "version": "1.5.4",
   "description": "AI-powered YouTube documentary production pipeline with 12 specialized agents for research, scripting, AI voiceover, and asset management",
   "keywords": [
     "youtube",
@@ -46,12 +46,6 @@
   },
   "files": [
     "agents/",
-    "tools/downloaders/",
-    "tools/validators/",
-    "tools/logging/",
-    "tools/audio/",
-    "tools/check_env.py",
-    "tools/auto_rework.py",
     "workflows/",
     "docs/",
     "memory/",
@@ -79,7 +73,8 @@
     ".codex/",
     ".env.example",
     "CONTRIBUTING.md",
-    "LICENSE"
+    "LICENSE",
+    "tools/"
   ],
   "engines": {
     "node": ">=20.0.0"

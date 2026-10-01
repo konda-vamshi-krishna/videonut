@@ -108,6 +108,18 @@ jobs:
             fi
           done
 
+          # Every tool on disk must be in the tarball. A new tools/<x>.py that
+          # package.json does not ship means an agent tells the user to run a
+          # file they do not have - the F1 failure mode, one directory down.
+          cd "$GITHUB_WORKSPACE/_video_nut"
+          while read -r t; do
+            if ! grep -q "package/$t$" /tmp/files.txt; then
+              echo "::error::$t exists but is not in the tarball - add it to package.json files[]"
+              fail=1
+            fi
+          done < <(find tools -name '*.py' | sort)
+          echo "  checked $(find tools -name '*.py' | wc -l) tool files"
+
           if grep -q "__pycache__" /tmp/files.txt; then
             echo "::error::compiled bytecode is in the tarball"
             fail=1

@@ -48,6 +48,9 @@ Round two also found that **the two halves of the pipeline disagreed about how f
 | F15 | 🟠 High | Two different words-per-minute tables — the gate rejected correct Telugu/Hindi scripts | **Fixed** |
 | F16 | 🟡 Medium | `/visionary` and `/narrator` had no inbound handoff; `narration_cues.md` had no reader | **Fixed** |
 | F19 | 🟠 High | AI-generated shots were prompted, generated, then silently dropped before delivery | **Fixed** |
+| F20 | 🟠 High | `communication_language` was read by **zero** agents and overwritten with `audio_language` | **Fixed** |
+| F21 | 🟠 High | `target_word_count` — the EIC's hard gate — was LLM mental arithmetic, never computed | **Fixed** |
+| F22 | 🟡 Medium | `package.json` would not ship a new root-level tool; `/seo` had no inbound handoff | **Fixed** |
 | F17 | 🟡 Medium | Menu items without `triggers=`; dead letter-codes in `seo.md` / `thumbnail.md` | **Partially fixed** |
 | F18 | 🟡 Medium | Piper profile claimed an MIT licence that no longer applies | **Fixed** |
 
@@ -689,9 +692,97 @@ Draft passes now use a dedicated free chain — `kokoro → piper → edge → m
 timing render can never reach for a paid API. A test asserts every provider in that
 chain costs `$0.00` per 1,000 characters.
 
+
 ---
 
-## 9. Recommended next steps
+## 9. Round three — what the agents tell the user
+
+Rounds one and two audited agents against their own specs, then against each other.
+This pass audited the **agent↔user** boundary: the instructions, questions and errors
+the user actually sees. Checked mechanically rather than by reading.
+
+Clean on three checks: all **22 tools** agents tell the user to run exist; all **11
+slash commands** they reference are registered; no agent references a config key that
+does not exist.
+
+### F20 — 🟠 The "talk to me in my language" setting was ignored, then overwritten
+
+`config.yaml` exposes two language fields:
+
+| Field | Means |
+|---|---|
+| `audio_language` | the language of the finished **video** |
+| `communication_language` | the language the agents speak **to you** |
+
+Two defects, compounding:
+
+1. **Zero of twelve agents read `communication_language`.** Every greeting, menu,
+   question, warning and error came out in English regardless of the setting.
+2. **The Topic Scout overwrote it.** `topic_scout.md` wrote
+   `communication_language: "{audio_language}"` into config — so the two concepts were
+   conflated at write time, and any value the user had set by hand was destroyed on the
+   next run.
+
+The net effect: a setting the user can configure, which is silently discarded and then
+ignored. Producing a Telugu documentary while wanting to be briefed in English — a
+perfectly ordinary preference — was not expressible.
+
+**Fix.** The Topic Scout now asks for the two separately and explains the difference.
+All twelve agents carry a rule to conduct every interaction in
+`communication_language`, with an explicit carve-out: **artifacts, markdown headings,
+status tags and agent names are never translated**, because downstream agents and the
+validators parse those literally. Getting that wrong would have traded a cosmetic bug
+for a pipeline-breaking one.
+
+### F21 — 🟠 The gate that fails your script was never actually calculated
+
+`target_word_count` is the number the EIC hard-fails a script against at ±10%. Nothing
+computed it. `topic_scout.md` instructed the agent to *"Calculate target_word_count
+based on audio_language settings"* and listed the multiplications — so an LLM did
+`duration × wpm` as mental arithmetic and wrote the result into config, where it was
+never cross-checked by anything.
+
+If the model slipped a digit, every downstream script was measured against a wrong
+target: correct work rejected, bad work approved, and nothing anywhere to notice. This
+compounded F15 — the model also had to *remember* the per-language rate, and those
+rates had already drifted apart once.
+
+**Fix.** New `tools/word_target.py` is the only thing that multiplies, and it imports
+`WPM_BY_LANGUAGE` from the normalizer rather than keeping a second copy. The Topic
+Scout calls it instead of calculating; the EIC **re-verifies the target before judging
+the script against it** and flags a discrepancy rather than trusting config blindly.
+
+```
+$ python tools/word_target.py 15 Telugu --check 1650
+  Language            : Telugu (110 wpm)
+  Target word count   : 1650
+  Accepted band (+/-10%): 1485 - 1815
+  Actual word count   : 1650 (+0.0%)
+  [OK] Within tolerance.
+```
+
+That is the exact case the old mismatched tables rejected as "12% short".
+
+### F22 — 🟡 A new tool would not have shipped, and `/seo` was unreachable
+
+Two smaller findings, both caught mechanically.
+
+**The package would have silently dropped the new tool.** `package.json` `files[]`
+whitelisted tools *subdirectories* plus two hand-listed root files, so
+`tools/word_target.py` was excluded from the tarball — the agents would tell the user
+to run a file that did not exist on their machine. This is F1 one directory down: the
+package promising something the artifact does not contain. Fixed by shipping `tools/`
+wholesale, and now **enforced in CI** — the package job diffs every `tools/**/*.py` on
+disk against the tarball contents.
+
+**`/seo` had zero inbound references.** Nothing in the pipeline ever told the user to
+run it, so `youtube_optimization.md` only got produced if the user already knew to ask.
+The EIC now names the post-production agents on approval. A test asserts every agent
+except the entry point is reachable from another.
+
+---
+
+## 10. Recommended next steps
 
 Not done here, in priority order:
 
