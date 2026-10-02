@@ -71,6 +71,32 @@ def main():
             print(f"[FAIL] Tool missing: {tool_name} at {tool_path}")
             all_good = False
 
+    # 5. Narration (TTS) readiness - warnings only, never fatal.
+    #    The pipeline always has a free fallback, so a missing key must not
+    #    block the whole environment check.
+    print("-" * 30)
+    print("[SCAN] Narration (Narrator agent) readiness...")
+    try:
+        audio_dir = os.path.join(os.path.dirname(__file__), "audio")
+        sys.path.insert(0, audio_dir)
+        from providers import available_providers  # noqa: E402
+
+        status = available_providers("English")
+        ready_paid = [n for n, (ok, _) in status.items()
+                      if ok and n not in ("mock", "edge", "piper")]
+        for name, (ok, reason) in status.items():
+            mark = "[OK]" if ok else "[--]"
+            print(f"  {mark} tts:{name:<11} {reason}")
+        if ready_paid:
+            print(f"  [OK] Production narration available via: {', '.join(ready_paid)}")
+        else:
+            print("  [WARN] No production TTS provider configured.")
+            print("         Narration will fall back to free/placeholder audio.")
+            print("         Copy .env.example to .env and add ELEVENLABS_API_KEY,")
+            print("         SARVAM_API_KEY (Indic), GEMINI_API_KEY or OPENAI_API_KEY.")
+    except Exception as e:
+        print(f"  [WARN] Could not probe TTS providers: {e}")
+
     print("-" * 30)
     if all_good:
         print("[RUN] System is READY for VideoNut Agents.")

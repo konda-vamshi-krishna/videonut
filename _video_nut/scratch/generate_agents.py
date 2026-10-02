@@ -48,6 +48,7 @@ def main():
         "creative/seo.md": "seo",
         "creative/thumbnail.md": "thumbnail",
         "creative/visionary.md": "visionary",
+        "creative/narrator.md": "narrator",
         "research/investigator.md": "investigator",
         "research/topic_scout.md": "topic_scout",
         "technical/archivist.md": "archivist",

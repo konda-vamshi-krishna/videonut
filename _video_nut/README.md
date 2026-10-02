@@ -6,12 +6,13 @@
 
 ### 🚀 Create Professional YouTube Documentaries with AI Agents
 
+[![CI](https://img.shields.io/github/actions/workflow/status/konda-vamshi-krishna/videonut/ci.yml?style=flat-square&logo=githubactions&logoColor=white&label=CI)](https://github.com/konda-vamshi-krishna/videonut/actions/workflows/ci.yml)
 [![NPM Version](https://img.shields.io/npm/v/videonut?style=flat-square&logo=npm&logoColor=white&label=npm&color=CB3837)](https://www.npmjs.com/package/videonut)
 [![GitHub Stars](https://img.shields.io/github/stars/konda-vamshi-krishna/videonut?style=flat-square&logo=github&color=yellow)](https://github.com/konda-vamshi-krishna/videonut)
 [![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
-[![Node](https://img.shields.io/badge/Node.js-16+-339933?style=flat-square&logo=node.js&logoColor=white)](https://nodejs.org)
+[![Node](https://img.shields.io/badge/Node.js-20+-339933?style=flat-square&logo=node.js&logoColor=white)](https://nodejs.org)
 
-**11 Specialized AI Agents** | **Multi-CLI Support** | **Zero Manual Research** | **Production-Ready Assets**
+**12 Specialized AI Agents** | **AI Voiceover Built In** | **Multi-CLI Support** | **Production-Ready Assets**
 
 [📦 Install](#-quick-install) • [🎯 Quick Start](#-quick-start) • [🤖 Agents](#-meet-the-agents) • [📖 Docs](#-documentation) • [🤝 Contribute](#-contributing)
 
@@ -31,19 +32,27 @@ npx videonut init
 
 ## 🎯 What is VideoNut?
 
-VideoNut transforms your ideas into **production-ready YouTube documentaries** using 11 specialized AI agents:
+VideoNut transforms your ideas into **production-ready YouTube documentaries** using 12 specialized AI agents:
 
 ```
-📡 Topic Scout → 🎯 Prompt → 🕵️ Investigator → ✍️ Scriptwriter → 🎬 Director
+📡 Topic Scout → 🎯 Prompt → 🕵️ Investigator → ✍️ Scriptwriter → 🎙️ Narrator (draft)
         ↓
-    🎨 Visionary → 🦅 Scavenger → 💾 Archivist → 🧐 EIC → 🎨 Thumbnail → 🔍 SEO
+    🎬 Director → 🎨 Visionary → 🦅 Scavenger → 💾 Archivist → 🧐 EIC
+        ↓
+    🎙️ Narrator (final) → 🎨 Thumbnail → 🔍 SEO
 ```
+
+The Narrator runs twice on purpose: a **free draft pass** right after the script,
+so the Director cuts shots against a real runtime instead of a word-count guess,
+and a **paid final pass** only after the Editor-in-Chief approves — so a rewrite
+never means paying for the same audio twice.
 
 ### What You Get:
 | Output | Description |
 |--------|-------------|
 | 📋 **Research Dossier** | Fully sourced facts with YouTube video timestamps |
 | ✍️ **Complete Script** | Word-count matched narration for your target duration |
+| 🎙️ **Narration Audio** | Finished MP3 voiceover with a section → timecode cue sheet |
 | 🎬 **Visual Direction** | Shot-by-shot guide with asset links |
 | 📦 **Downloaded Assets** | Video clips, screenshots, PDFs ready for editing |
 | 🎨 **Thumbnail Prompts** | AI image generation prompts for click-worthy thumbnails |
@@ -134,13 +143,15 @@ gemini
 | 2 | 🎯 **Prompt** | `/prompt` | Generate research questions |
 | 3 | 🕵️ **Investigator** | `/investigator` | Deep research with sources |
 | 4 | ✍️ **Scriptwriter** | `/scriptwriter` | Write narration script |
-| 5 | 🎬 **Director** | `/director` | Create visual directions |
-| 6 | 🎨 **Visionary** | `/visionary` | Generate AI image and video prompts |
-| 7 | 🦅 **Scavenger** | `/scavenger` | Find and verify assets |
-| 8 | 💾 **Archivist** | `/archivist` | Download all assets |
-| 9 | 🧐 **EIC** | `/eic` | Final quality review |
-| 10 | 🎨 **Thumbnail** | `/thumbnail` | Generate thumbnail prompts |
-| 11 | 🔍 **SEO** | `/seo` | YouTube optimization |
+| 5 | 🎙️ **Narrator** | `/narrator` | Render the script to voiceover audio (draft pass) |
+| 6 | 🎬 **Director** | `/director` | Create visual directions, timed to the real narration |
+| 7 | 🎨 **Visionary** | `/visionary` | Generate AI image and video prompts |
+| 8 | 🦅 **Scavenger** | `/scavenger` | Find and verify assets |
+| 9 | 💾 **Archivist** | `/archivist` | Download all assets |
+| 10 | 🧐 **EIC** | `/eic` | Final quality review |
+| 11 | 🎙️ **Narrator** | `/narrator` | Render the **final** production voiceover |
+| 12 | 🎨 **Thumbnail** | `/thumbnail` | Generate thumbnail prompts |
+| 13 | 🔍 **SEO** | `/seo` | YouTube optimization |
 
 ---
 
@@ -163,6 +174,7 @@ gemini
 | Agent | Persona | What They Do |
 |-------|---------|--------------|
 | **Sorkin** | Scriptwriter | Word-count matched scripts with hooks |
+| **Attenborough** | Narrator | Renders the script to voiceover audio via AI TTS |
 | **Spielberg** | Director | Visual directions with source links |
 | **Visionary** | Visual Prompt Engineer | Detailed prompts for AI image/video scenes |
 | **Canvas** | Thumbnail Designer | Click-worthy thumbnail AI prompts |
@@ -189,11 +201,17 @@ gemini
 my-documentary/
 ├── 📋 topic_brief.md        # Topic and angle
 ├── 📝 truth_dossier.md      # Research with sources
-├── ✍️ voice_script.md       # Narration script
+├── ✍️ voice_script.md       # Narration script (what the Narrator reads)
 ├── 🎬 master_script.md      # Script + Visuals
 ├── 🎨 visual_prompts.md     # Prompts for AI visual generation
 ├── 📦 asset_manifest.md     # All asset URLs
+├── 🎙️ voiceover_report.md   # Narration render report (provider, cost, warnings)
 ├── 📂 assets/               # Downloaded files
+│   ├── 🎧 audio/narration/
+│   │   ├── narration_full.mp3      # ← your finished voiceover
+│   │   ├── narration_cues.md       # section → timecode map
+│   │   ├── narration_manifest.json
+│   │   └── segments/               # per-chunk audio for surgical re-cuts
 │   ├── 001_clip.mp4
 │   ├── 002_chart.png
 │   └── ...
@@ -212,7 +230,32 @@ video_format: "investigative" # investigative, explainer, documentary
 audio_language: "English"
 country: "India"
 industry_tag: "political"    # political, finance, crime, tech
+
+voice:                       # AI narration
+  enabled: true
+  provider: auto             # auto | elevenlabs | sarvam | gemini | openai | piper | edge | mock
+  draft_pass: true           # free timing render before the Director
+  cost_ceiling_usd: 25.0     # hard stop before overspending
 ```
+
+### 🔑 API keys
+
+Keys go in `.env` at the project root — **never** in `config.yaml`, which is
+committed and shipped.
+
+```bash
+cp .env.example .env
+```
+
+You only need one TTS key. With none, narration falls back to free `edge-tts`,
+then to silent placeholder audio with exact timings, so the pipeline never
+hard-blocks.
+
+| Language | Recommended provider |
+|---|---|
+| English | `ELEVENLABS_API_KEY` — best long-form stability |
+| Hindi / Telugu / Tamil / Kannada / Malayalam / Marathi / Bengali | `SARVAM_API_KEY` — higher MOS than ElevenLabs on Indic, ~10× cheaper |
+| Best value, any language | `GEMINI_API_KEY` |
 
 ---
 
@@ -222,6 +265,7 @@ industry_tag: "political"    # political, finance, crime, tech
 |---------|----------|----------------|
 | Research Time | ~30 mins | 8+ hours |
 | Script Writing | Auto-generated | Manual |
+| Voiceover | Rendered + timecoded | Record or paste into a TTS site |
 | Asset Finding | Verified URLs | Hunt & Hope |
 | Downloads | One-click | Individual |
 | Quality Check | 10-phase audit | Self-review |
@@ -243,6 +287,7 @@ We welcome contributions! Check out our [Contributing Guide](CONTRIBUTING.md).
 ## 📖 Documentation
 
 - [📘 User Guide](USER_GUIDE.md)
+- [🎙️ Voice Agent / TTS Reference](docs/VOICE_AGENT.md)
 - [🔄 Agent Lifecycle](docs/LIFECYCLE.md)
 - [🔍 Audit Report](docs/AUDIT_REPORT.md)
 

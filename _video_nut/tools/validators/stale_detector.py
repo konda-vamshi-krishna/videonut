@@ -21,6 +21,10 @@ def detect_stale_stages(project_path):
     script_path = os.path.join(project_path, "narrative_script.md")
     master_path = os.path.join(project_path, "master_script.md")
     manifest_path = os.path.join(project_path, "asset_manifest.md")
+    voice_script_path = os.path.join(project_path, "voice_script.md")
+    narration_manifest = os.path.join(
+        project_path, "assets", "audio", "narration", "narration_manifest.json"
+    )
     prompts_path = os.path.join(project_path, "visual_prompts.md")
     assets_dir = os.path.join(project_path, "assets")
 
@@ -36,10 +40,13 @@ def detect_stale_stages(project_path):
     t_master = get_mtime(master_path)
     t_manifest = get_mtime(manifest_path)
     t_prompts = get_mtime(prompts_path)
+    t_voice_script = get_mtime(voice_script_path)
+    t_narration = get_mtime(narration_manifest)
     
     stale_stages = {
         "investigation": False,
         "scriptwriting": False,
+        "voiceover": False,
         "direction": False,
         "scavenging": False,
         "visionary": False,
@@ -53,6 +60,13 @@ def detect_stale_stages(project_path):
     # 2. Scriptwriting is stale if truth_dossier.md is newer than narrative_script.md, or if investigation is stale
     if (t_dossier > 0 and t_script > 0 and t_dossier > t_script) or stale_stages["investigation"]:
         stale_stages["scriptwriting"] = True
+
+    # 2b. Voiceover is stale if voice_script.md is newer than the rendered narration,
+    #     or if scriptwriting itself is stale. Shipping audio of an old script is the
+    #     single most expensive mistake in this pipeline - catch it here.
+    if (t_voice_script > 0 and t_narration > 0 and t_voice_script > t_narration) \
+            or stale_stages["scriptwriting"]:
+        stale_stages["voiceover"] = True
 
     # 3. Direction is stale if narrative_script.md is newer than master_script.md, or if scriptwriting is stale
     if (t_script > 0 and t_master > 0 and t_script > t_master) or stale_stages["scriptwriting"]:

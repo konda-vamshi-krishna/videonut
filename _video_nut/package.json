@@ -1,7 +1,7 @@
 {
   "name": "videonut",
-  "version": "1.4.0",
-  "description": "AI-powered YouTube documentary production pipeline with 10 specialized agents for research, scripting, and asset management",
+  "version": "1.5.4",
+  "description": "AI-powered YouTube documentary production pipeline with 12 specialized agents for research, scripting, AI voiceover, and asset management",
   "keywords": [
     "youtube",
     "documentary",
@@ -13,7 +13,12 @@
     "content-creation",
     "scriptwriting",
     "research",
-    "automation"
+    "automation",
+    "text-to-speech",
+    "tts",
+    "voiceover",
+    "elevenlabs",
+    "narration"
   ],
   "homepage": "https://github.com/konda-vamshi-krishna/videonut",
   "bugs": {
@@ -29,18 +34,18 @@
     "url": "git+https://github.com/konda-vamshi-krishna/videonut.git"
   },
   "scripts": {
-    "setup": "node setup.js"
+    "setup": "node setup.js",
+    "prepack": "node scripts/prepack.js",
+    "postpack": "node scripts/prepack.js --clean",
+    "verify-package": "node scripts/prepack.js --verify",
+    "build-agents": "python ../scratch/generate_agents.py",
+    "test": "python ../tests/run_tests.py"
   },
   "bin": {
     "videonut": "./bin/videonut.js"
   },
   "files": [
     "agents/",
-    "tools/downloaders/",
-    "tools/validators/",
-    "tools/logging/",
-    "tools/check_env.py",
-    "tools/auto_rework.py",
     "workflows/",
     "docs/",
     "memory/",
@@ -63,8 +68,13 @@
     "file_validator.py",
     "README.md",
     "USER_GUIDE.md",
+    "cli_templates/",
+    ".hermes/",
+    ".codex/",
+    ".env.example",
     "CONTRIBUTING.md",
-    "LICENSE"
+    "LICENSE",
+    "tools/"
   ],
   "engines": {
     "node": ">=20.0.0"

@@ -1,14 +1,19 @@
 @echo off
-REM Add local Python, FFmpeg, and AppData NPM prefix to PATH for this session
-set PATH=G:\youtuber\work_space\AI _TEAM\_video_nut\python;G:\youtuber\work_space\AI _TEAM\_video_nut\python\Scripts;G:\youtuber\work_space\AI _TEAM\_video_nut\tools\bin;%APPDATA%\npm;%PATH%
+REM %~dp0 = the folder this .bat lives in, WITH a trailing backslash.
+REM Everything below is relative to it, so the launcher works from any drive or
+REM folder (it used to hardcode the original author's G:\ paths).
+set "VN_ROOT=%~dp0"
+set "VN_HOME=%VN_ROOT%_video_nut"
+set PATH=%VN_HOME%\python;%VN_HOME%\python\Scripts;%VN_HOME%\tools\bin;%APPDATA%\npm;%PATH%
 
 :menu
 cls
 echo ====================================================
 echo                 🎬 VideoNut Launcher 🎬
 echo ====================================================
-echo  Python Path: G:\youtuber\work_space\AI _TEAM\_video_nut\python
-echo  FFmpeg Path: G:\youtuber\work_space\AI _TEAM\_video_nut\tools\bin
+echo  Project Root: %VN_ROOT%
+echo  Python Path : %VN_HOME%\python
+echo  FFmpeg Path : %VN_HOME%\tools\bin
 echo ====================================================
 echo.
 echo  Choose an AI CLI tool or utility to run:
@@ -20,10 +25,11 @@ echo   [4] Alibaba Qwen CLI
 echo   [5] Aider CLI
 echo   [6] Run Environment Check
 echo   [7] Run Package Setup / CLI Installer
-echo   [8] Exit
+echo   [8] Render Narration (Narrator / TTS)
+echo   [9] Exit
 echo.
 echo ====================================================
-set /p choice="Enter option (1-8): "
+set /p choice="Enter option (1-9): "
 
 if "%choice%"=="1" goto launch_gemini
 if "%choice%"=="2" goto launch_claude
@@ -32,7 +38,8 @@ if "%choice%"=="4" goto launch_qwen
 if "%choice%"=="5" goto launch_aider
 if "%choice%"=="6" goto run_check
 if "%choice%"=="7" goto run_setup
-if "%choice%"=="8" goto end
+if "%choice%"=="8" goto run_voice
+if "%choice%"=="9" goto end
 goto menu
 
 :launch_gemini
@@ -127,13 +134,23 @@ goto menu
 
 :run_check
 echo Running Environment Check...
-python "G:/youtuber/work_space/AI _TEAM/_video_nut/tools/check_env.py"
+python "%VN_HOME%\tools\check_env.py"
 pause
 goto menu
 
 :run_setup
 echo Launching Setup Script...
-node "G:/youtuber/work_space/AI _TEAM/_video_nut/setup.js"
+node "%VN_HOME%\setup.js"
+pause
+goto menu
+
+:run_voice
+set /p vnproj="Path to the project folder: "
+echo Estimating narration cost (nothing is billed yet)...
+python "%VN_HOME%\tools\audio\tts_engine.py" --project "%vnproj%" --dry-run
+echo.
+set /p vngo="Render the narration now? (Y/N): "
+if /i "%vngo%"=="Y" python "%VN_HOME%\tools\audio\tts_engine.py" --project "%vnproj%" --mode final --yes
 pause
 goto menu
 

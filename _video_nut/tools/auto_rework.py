@@ -12,20 +12,71 @@ if hasattr(sys.stderr, 'reconfigure'):
 STAGE_ORDER = [
     "investigation",
     "scriptwriting",
+    "voiceover",
     "direction",
     "scavenging",
     "visionary",
     "archiving"
 ]
 
+# Every spelling of an agent the EIC might put in review_result.json, mapped to
+# the pipeline stage that has to be re-run.
+#
+# This used to accept only the canonical lowercase names - but eic.md's own
+# "Send Back to Agent" prompt offers the abbreviations SCOUT/PROMPT/INV/SCRIPT/
+# DIR/SCAV/ARCH, none of which matched. A verdict naming "INV" resolved to no
+# stage, auto_rework printed "Rework not required", and the orchestrator read
+# that as approval. Aliases below close that gap; the fail-closed status line
+# below stops any remaining mismatch from silently passing.
 AGENT_TO_STAGE = {
+    # canonical
     "investigator": "investigation",
     "scriptwriter": "scriptwriting",
+    "narrator": "voiceover",
+    "voiceover": "voiceover",
     "director": "direction",
     "scavenger": "scavenging",
     "visionary": "visionary",
-    "archivist": "archiving"
+    "archivist": "archiving",
+    # abbreviations used in eic.md's menu prompt
+    "inv": "investigation",
+    "script": "scriptwriting",
+    "narr": "voiceover",
+    "vo": "voiceover",
+    "dir": "direction",
+    "scav": "scavenging",
+    "vis": "visionary",
+    "arch": "archiving",
+    # display names
+    "the investigator": "investigation",
+    "the scriptwriter": "scriptwriting",
+    "the narrator": "voiceover",
+    "the director": "direction",
+    "the scavenger": "scavenging",
+    "the visionary": "visionary",
+    "the archivist": "archiving",
 }
+
+# Agents the EIC scores but that the orchestrator does not own a stage for.
+# Blame on these cannot be auto-reset; it must be surfaced to the human instead
+# of silently evaporating.
+MANUAL_ONLY_AGENTS = {
+    "scout": "topic_scout", "topic_scout": "topic_scout", "topicscout": "topic_scout",
+    "topic scout": "topic_scout", "the topic scout": "topic_scout",
+    "prompt": "prompt", "prompt_agent": "prompt", "promptagent": "prompt",
+    "prompt agent": "prompt", "the prompt agent": "prompt",
+    "seo": "seo", "thumbnail": "thumbnail", "eic": "eic",
+}
+
+class UndeterminedVerdict(Exception):
+    """
+    The EIC's verdict could not be resolved into an action.
+
+    This exists because the alternative - returning None, the same value used for
+    "approved" - made every EIC failure mode read as a pass. The orchestrator now
+    halts on this instead of shipping an unreviewed video.
+    """
+
 
 def parse_review_result(project_path):
     """
@@ -33,46 +84,75 @@ def parse_review_result(project_path):
     """
     result_path = os.path.join(project_path, "review_result.json")
     if not os.path.exists(result_path):
-        return None, "No review_result.json found in project folder."
+        raise UndeterminedVerdict(
+            "No review_result.json in the project folder. The EIC either never ran "
+            "or failed before writing its verdict - this is NOT an approval."
+        )
         
     try:
         with open(result_path, 'r', encoding='utf-8') as f:
             data = json.load(f)
     except Exception as e:
-        return None, f"Failed to parse review_result.json: {str(e)}"
+        raise UndeterminedVerdict(f"review_result.json is unreadable: {e}")
         
-    verdict = data.get("verdict", "").upper()
-    if verdict not in ["REJECTED", "NEEDS WORK", "FAILED"]:
-        return None, f"Project approved or has a non-failure verdict: '{verdict}'"
-        
-    failed_agents = data.get("failed_agents", [])
-    if not failed_agents:
-        # Check rerun_from as a fallback
-        rerun_from = data.get("rerun_from", "")
-        if rerun_from:
-            stage = AGENT_TO_STAGE.get(rerun_from.lower(), rerun_from.lower())
-            if stage in STAGE_ORDER:
-                return stage, f"EIC requested rerun starting from agent '{rerun_from}'"
-        return None, "Verdict indicates failure, but no failed_agents or rerun_from was specified."
-        
+    verdict = data.get("verdict", "").strip().upper()
+    if verdict in ("APPROVED", "PASS", "PASSED", "OK"):
+        return None, f"EIC verdict is '{verdict}'."
+    if verdict not in ("REJECTED", "NEEDS WORK", "NEEDS_WORK", "FAILED", "FAIL"):
+        # An unrecognised verdict is NOT an approval. Say so.
+        raise UndeterminedVerdict(
+            f"Unrecognised EIC verdict {verdict!r}. Expected APPROVED / NEEDS WORK / REJECTED."
+        )
+
+    failed_agents = data.get("failed_agents", []) or []
+    names = [str(item.get("agent", "")).strip().lower()
+             for item in failed_agents if isinstance(item, dict)]
+    rerun_from = str(data.get("rerun_from", "") or "").strip().lower()
+    if rerun_from:
+        names.append(rerun_from)
+    names = [n for n in names if n]
+
+    if not names:
+        raise UndeterminedVerdict(
+            f"EIC verdict is '{verdict}' but neither failed_agents nor rerun_from "
+            "names an agent, so there is nothing to reset."
+        )
+
     # Find the earliest failed stage in pipeline order
     earliest_stage_idx = len(STAGE_ORDER)
     earliest_agent = None
-    
-    for item in failed_agents:
-        agent_name = item.get("agent", "").lower()
-        stage = AGENT_TO_STAGE.get(agent_name, agent_name)
-        if stage in STAGE_ORDER:
-            idx = STAGE_ORDER.index(stage)
-            if idx < earliest_stage_idx:
-                earliest_stage_idx = idx
-                earliest_agent = agent_name
+    manual_only = []
+
+    for agent_name in names:
+        stage = AGENT_TO_STAGE.get(agent_name)
+        if stage is None:
+            if agent_name in MANUAL_ONLY_AGENTS:
+                manual_only.append(MANUAL_ONLY_AGENTS[agent_name])
+            continue
+        idx = STAGE_ORDER.index(stage)
+        if idx < earliest_stage_idx:
+            earliest_stage_idx = idx
+            earliest_agent = agent_name
 
     if earliest_agent:
         failed_stage = STAGE_ORDER[earliest_stage_idx]
-        return failed_stage, f"Failed agent '{earliest_agent}' maps to stage '{failed_stage}'"
-        
-    return None, "Could not map failed agents to any pipeline stages."
+        note = ""
+        if manual_only:
+            note = (f" NOTE: the EIC also blamed {', '.join(sorted(set(manual_only)))}, "
+                    "which the orchestrator cannot re-run. Run those agents by hand.")
+        return failed_stage, (f"Failed agent '{earliest_agent}' maps to stage "
+                              f"'{failed_stage}'.{note}")
+
+    if manual_only:
+        raise UndeterminedVerdict(
+            f"EIC blamed {', '.join(sorted(set(manual_only)))}, which has no automated "
+            f"pipeline stage. Re-run /{sorted(set(manual_only))[0]} manually, then re-run the EIC."
+        )
+
+    raise UndeterminedVerdict(
+        f"EIC verdict is '{verdict}' but none of {names} maps to a pipeline stage. "
+        f"Known agents: {', '.join(sorted(set(AGENT_TO_STAGE)))}."
+    )
 
 def apply_rework_checkpoints(project_path, fail_stage):
     """
@@ -94,6 +174,7 @@ def apply_rework_checkpoints(project_path, fail_stage):
     stage_to_key = {
         "investigation": "investigation_complete",
         "scriptwriting": "scriptwriting_complete",
+        "voiceover": "voiceover_draft_complete",
         "direction": "direction_complete",
         "scavenging": "scavenging_complete",
         "visionary": "visionary_complete",
@@ -108,6 +189,14 @@ def apply_rework_checkpoints(project_path, fail_stage):
             checkpoints[key] = False
             print(f"  - Set {key} = False")
             
+    # A rework at or above the script level invalidates any narration already
+    # rendered from that script - otherwise the pipeline ships audio of the old text.
+    if fail_stage in ("investigation", "scriptwriting", "voiceover"):
+        for key in ("voiceover_draft_complete", "voiceover_final_complete"):
+            if key in checkpoints and checkpoints[key]:
+                checkpoints[key] = False
+                print(f"  - Set {key} = False (script changed, narration is stale)")
+
     # Update last_step to the step before the failure
     if fail_idx > 0:
         checkpoints["last_step"] = STAGE_ORDER[fail_idx - 1]
@@ -131,22 +220,35 @@ def main():
         print(f"[FAIL] Project path '{project_path}' does not exist.")
         sys.exit(1)
         
-    fail_stage, msg = parse_review_result(project_path)
+    # Every exit path prints exactly one REVIEW_STATUS: line. The orchestrator
+    # keys off that line, never off the absence of RERUN_STAGE - the old
+    # behaviour, where "no rerun stage" meant "approved", turned every EIC
+    # failure mode into a silent pass.
+    try:
+        fail_stage, msg = parse_review_result(project_path)
+    except UndeterminedVerdict as e:
+        print(f"[FAIL] Cannot determine the EIC verdict: {e}")
+        print("REVIEW_STATUS:UNDETERMINED")
+        sys.exit(2)
+
     if not fail_stage:
         print(f"[OK] Rework not required: {msg}")
+        print("REVIEW_STATUS:APPROVED")
         sys.exit(0)
-        
+
     print(f"[ALERT] Rework required: {msg}")
     success, reset_msg = apply_rework_checkpoints(project_path, fail_stage)
-    
+
     if success:
         print(f"[OK] Rework initialized successfully: {reset_msg}")
+        print("REVIEW_STATUS:REWORK")
         # Print fail stage in a special tag for parent orchestrator parsing
         print(f"RERUN_STAGE:{fail_stage}")
         sys.exit(0)
     else:
         print(f"[FAIL] Rework initialization failed: {reset_msg}")
-        sys.exit(1)
+        print("REVIEW_STATUS:UNDETERMINED")
+        sys.exit(2)
 
 if __name__ == "__main__":
     main()

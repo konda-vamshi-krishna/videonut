@@ -1,5 +1,9 @@
 # 🎯 VideoNut Upgrade — True Source of Truth
-> **Status**: IN PROGRESS | **Version**: 1.0 | **Last Updated**: 2025-06-17
+> **Status**: PHASES 1-4 SHIPPED | **Version**: 1.5 | **Last Updated**: 2026-09-28
+>
+> ⚠️ This tracker was stale: it listed every phase as "Not Started" while the
+> tools it describes were already written and running. Corrected below against
+> the actual contents of `_video_nut/tools/` on 2026-09-28.
 >
 > This document is the single-stop reference for the entire VideoNut tool upgrade.
 > It consolidates analysis, theory, edge cases, implementation phases, open-source alternatives,
@@ -560,15 +564,19 @@ python -m py_compile _video_nut/tools/downloaders/screenshotter.py
 
 ## 12. Progress Tracker
 
-| Phase | Description | Status | Started | Completed |
-|-------|-------------|--------|---------|-----------|
-| **Phase 1** | Audit Logger & Doc Reader | `[ ]` Not Started | — | — |
-| **Phase 2** | Web Reader & PDF Reader | `[ ]` Not Started | — | — |
-| **Phase 3** | Clip Grabber & Caption Reader | `[ ]` Not Started | — | — |
-| **Phase 4** | Social Media & Screenshots | `[ ]` Not Started | — | — |
-| **Phase 5** | Agent Prompt Enhancements | `[ ]` Not Started | — | — |
-| **Phase 6** | Integration & Polish | `[ ]` Not Started | — | — |
+| Phase | Description | Status | Evidence |
+|-------|-------------|--------|----------|
+| **Phase 1** | Audit Logger & Doc Reader | `[x]` Shipped | `tools/logging/audit_logger.py`, `tools/downloaders/doc_reader.py` |
+| **Phase 2** | Web Reader & PDF Reader | `[x]` Shipped | `tools/downloaders/web_reader.py`, `pdf_reader.py` |
+| **Phase 3** | Clip Grabber & Caption Reader | `[x]` Shipped | `tools/downloaders/clip_grabber.py`, `caption_reader.py` |
+| **Phase 4** | Social Media & Screenshots | `[~]` Partial | `screenshotter.py`, `article_screenshotter.py` work. `social_media_reader.py` depends on Nitter/ntscraper, which is dead — needs replacing. |
+| **Phase 5** | Agent Prompt Enhancements | `[~]` Partial | EIC gained mechanical voice-cue and narration audits (v1.5). Other personas unchanged. |
+| **Phase 6** | Integration & Polish | `[~]` In progress | v1.5 audit fixed packaging, `shell=True`, hardcoded paths, `.pyc` hygiene, and added the Narrator + 27 tests. Open items tracked in `docs/AUDIT_V1_2026.md` §7. |
+| **Phase 7** | 🎙️ Narration / TTS | `[x]` Shipped (v1.5) | `tools/audio/`, `agents/creative/narrator.md`, `tools/validators/audio_validator.py` |
 
 ---
 
-> **Next Action**: Begin Phase 1 — Create `audit_logger.py` and `doc_reader.py`.
+> **Next Action**: work `docs/AUDIT_V1_2026.md` §7 — resolve the duplicate
+> validator (`file_validator.py` vs `output_validator.py`), move
+> `generate_agents.py` out of `scratch/`, and add CI running
+> `python tests/run_tests.py` + `npm run verify-package`.

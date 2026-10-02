@@ -22,6 +22,7 @@ if hasattr(sys.stderr, 'reconfigure'):
 STAGE_ORDER = [
     "investigation",
     "scriptwriting",
+    "voiceover",
     "direction",
     "scavenging",
     "visionary",
@@ -29,12 +30,15 @@ STAGE_ORDER = [
 ]
 
 class VideoNutOrchestrator:
-    def __init__(self, project_path, cli_runner="auto", force=False, rework_limit=3):
+    def __init__(self, project_path, cli_runner="auto", force=False, rework_limit=3,
+                 skip_voice=False, voice_provider=None):
         self.project_path = os.path.abspath(project_path)
         self.project_name = os.path.basename(self.project_path)
         self.checkpoint_file = os.path.join(self.project_path, ".workflow_checkpoint.json")
         self.force = force
         self.rework_limit = rework_limit
+        self.skip_voice = skip_voice
+        self.voice_provider = voice_provider
         
         # Determine CLI runner
         self.cli_runner = self.detect_cli_runner(cli_runner)
@@ -70,6 +74,8 @@ class VideoNutOrchestrator:
         return {
             "investigation_complete": False,
             "scriptwriting_complete": False, 
+            "voiceover_draft_complete": False,
+            "voiceover_final_complete": False,
             "direction_complete": False,
             "visionary_complete": False,
             "scavenging_complete": False,
@@ -109,6 +115,32 @@ class VideoNutOrchestrator:
         except Exception as e:
             print(f"⚠️  Failed to sync config.yaml: {str(e)}")
 
+    def voice_draft_enabled(self):
+        """Read voice.draft_pass from config.yaml (default: enabled)."""
+        if self.skip_voice:
+            return False
+        config_path = os.path.join(os.path.dirname(__file__), "config.yaml")
+        if not os.path.exists(config_path):
+            return True
+        try:
+            with open(config_path, "r", encoding="utf-8") as f:
+                in_voice_block = False
+                for line in f:
+                    stripped = line.strip()
+                    if stripped.startswith("voice:"):
+                        in_voice_block = True
+                        continue
+                    if in_voice_block:
+                        if stripped and not line.startswith((" ", "\t")):
+                            break
+                        if stripped.startswith("enabled:") and "false" in stripped.lower():
+                            return False
+                        if stripped.startswith("draft_pass:"):
+                            return "false" not in stripped.lower()
+        except Exception:
+            pass
+        return True
+
     def run_agent_cli(self, agent_name):
         """
         Executes an agent command using the designated CLI runner.
@@ -133,11 +165,15 @@ class VideoNutOrchestrator:
         try:
             # We run relative to the workspace root directory
             workspace_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            # NOTE: `shell=True` with a LIST is a cross-platform footgun - on POSIX
+            # only cmd_parts[0] is executed and every other element is dropped, so the
+            # agent silently runs with no prompt. Always pass the list with shell=False.
             result = subprocess.run(
                 cmd_parts,
-                shell=True,
+                shell=False,
                 capture_output=True,
                 encoding='utf-8',
+                errors='replace',
                 cwd=workspace_root
             )
             
@@ -161,7 +197,13 @@ class VideoNutOrchestrator:
         
         if agent_name == "investigator":
             file_path = os.path.join(self.project_path, "truth_dossier.md")
-            content = """# [INVESTIGATOR] Investigator Report: Truth Dossier
+            # This mock must match the structure investigator.md declares
+            # MANDATORY, otherwise mock runs validate green against artifacts
+            # the real validators would reject - which is exactly how the
+            # validator/mock contract mismatch (audit F3) went unnoticed.
+            content = """# Truth Dossier: Mock Topic
+
+## Investigation Questions (15-25 Questions partitioned by layer)
 1. What are the key elements?
 2. Research question 2: How does this work?
 3. Question 3: What are the main points?
@@ -178,9 +220,21 @@ class VideoNutOrchestrator:
 14. Question 14: How does it impact the future?
 15. Question 15: Final summary?
 
-Sources:
-- https://example.com/source1
-- https://youtube.com/watch?v=dQw4w9WgXcQ
+## Findings (Grouped by Layer)
+### Economic Layer Findings
+#### Question 1: What are the key elements?
+**Answer:** Mock finding with a citation for pipeline testing.
+**Source:** https://example.com/source1
+
+### Psychological Layer Findings
+#### Question 4: Who is affected?
+**Answer:** Mock finding describing the affected population.
+**Source:** https://youtube.com/watch?v=dQw4w9WgXcQ
+
+### Structural Layer Findings
+#### Question 7: When did it happen?
+**Answer:** Mock finding covering the structural timeline.
+**Source:** https://example.com/source2
 """
             with open(file_path, 'w', encoding='utf-8') as f:
                 f.write(content)
@@ -191,6 +245,10 @@ Sources:
 [HOOK]
 This is the dramatic opening hook of the documentary video.
 [Visual: Montage of historical footage]
+
+[BRIDGE]
+Here the illusion is shattered and the paradox thesis is introduced: the system
+everyone believes is efficient is structurally incapable of being so.
 
 [MEAT]
 NARRATOR: Here is the core meat and body of the video where we discuss research findings.
@@ -204,19 +262,71 @@ During World War II, machines like Colossus and ENIAC were built for military ca
 The microcomputer revolution in the 1970s and 1980s brought computing into the home, paving the way for the internet age and mobile computing.
 [Visual: Graphs and source documents showing Babbage's Analytical Engine and Ada Lovelace's notes]
 
+[VERDICT]
+NARRATOR: The systemic rule underneath all of this is simple, and once you see it
+you cannot unsee it: the incentives were never pointed at the outcome anyone wanted.
+
 [OUTRO]
 NARRATOR: Thank you for watching. Don't forget to like and subscribe for more deep dives into history!
 [Visual: Outro template with social media handles]
 """
             with open(file_path, 'w', encoding='utf-8') as f:
                 f.write(content)
-                
+
+            # The Narrator stage reads voice_script.md, so the mock must produce one.
+            voice_path = os.path.join(self.project_path, "voice_script.md")
+            voice_content = """# Voice Script (mock)
+
+[HOOK]
+(modulation pitch: low speed: slow tone: grave) This is the dramatic opening hook of the documentary. (end modulation)
+(pause 2s)
+(emphasis) Eight pages. (end emphasis) That is all it took.
+
+[BRIDGE]
+To understand what happened next, you have to understand what everyone missed. (pause 1s)
+
+[MEAT]
+Here is the core of the story. Computing history spans several centuries, starting from manual tools like the abacus,
+to the mechanical engines designed by Charles Babbage and Ada Lovelace.
+Ada Lovelace is widely recognised as the world's first computer programmer.
+In the twentieth century, computing evolved rapidly with vacuum tubes, transistors, and integrated circuits.
+Alan Turing introduced the concept of the Turing Machine, laying the theoretical foundation for modern computer science.
+During the Second World War, machines like Colossus and ENIAC were built for military calculations.
+(pause 1.5s) (modulation pitch: high speed: fast tone: questioning) So why did nobody see it coming? (end modulation)
+The microcomputer revolution of the 1970s and 1980s brought computing into the home.
+
+[HUMAN BEAT]
+One engineer described the moment the scale became undeniable. Not as a breakthrough. As a sinking feeling.
+
+[VERDICT]
+(modulation pitch: low speed: slow tone: grave) They did not lose because the research was weak.
+They lost because they read their own paper too narrowly. (end modulation) (pause 2s)
+
+[CTA]
+If this changed how you think about the history of computing, subscribe.
+
+**Total Words:** 210
+"""
+            with open(voice_path, 'w', encoding='utf-8') as f:
+                f.write(voice_content)
+
         elif agent_name == "director":
             file_path = os.path.join(self.project_path, "master_script.md")
+            # director.md declares this exact format:
+            #   [NARRATION: "..."] [VISUAL: Description. [Source: URL or MANUAL]]
             content = """# [WORKFLOW] Director Master Script
-- Scene 1: Introduction
-  [Visual: Montage, Source: https://youtube.com/watch?v=dQw4w9WgXcQ]
-  Narration: Welcome to the show.
+
+## Scene 1: Introduction [00:00 - 00:30]
+[NARRATION: "This is the dramatic opening hook of the documentary video."]
+[VISUAL: Montage of historical footage. [Source: https://youtube.com/watch?v=dQw4w9WgXcQ]]
+
+## Scene 2: The Shatter [00:30 - 01:15]
+[NARRATION: "Here the illusion is shattered and the paradox thesis is introduced."]
+[VISUAL: Split-screen comparison of the claim against the data. [Source: MANUAL]]
+
+## Scene 3: Verdict [01:15 - 02:00]
+[NARRATION: "The systemic rule underneath all of this is simple."]
+[VISUAL: Slow pan across highlighted contract clauses. [Source: CREATE]]
 """
             with open(file_path, 'w', encoding='utf-8') as f:
                 f.write(content)
@@ -382,11 +492,111 @@ We are specifying the URLs and time ranges for the clips to be trimmed by the Ar
         script_path = os.path.join(self.project_path, "narrative_script.md")
         if not self.run_validation_gate("script", script_path):
             return False
-            
+
+        # The voice script is what the Narrator/TTS stage actually bills for, so it
+        # gets its own (stricter) gate: no URLs, no visual directions, real cues.
+        voice_script_path = os.path.join(self.project_path, "voice_script.md")
+        if os.path.exists(voice_script_path):
+            if not self.run_validation_gate("voice", voice_script_path):
+                return False
+        else:
+            print("  [WARN] voice_script.md not found - the Narrator stage will fall back to "
+                  "narrative_script.md, which still contains visual directions.")
+
         self.checkpoints["scriptwriting_complete"] = True
         self.checkpoints["last_step"] = "scriptwriting"
         self.save_checkpoints()
         return True
+
+    def run_voiceover(self, mode="final"):
+        """
+        Narration stage. Renders voice_script.md into an audio track via
+        tools/audio/tts_engine.py.
+
+        mode="draft" : free/local timing pass run BEFORE the Director, so shots are
+                       cut against the real runtime instead of a word-count guess.
+                       Never fatal - a missing draft must not stop the pipeline.
+        mode="final" : production render, run AFTER the EIC approves the script so
+                       a rewrite never means paying for the same audio twice.
+        """
+        checkpoint_key = f"voiceover_{'draft' if mode == 'draft' else 'final'}_complete"
+
+        if self.skip_voice:
+            print(f"[SKIP] Voiceover ({mode}) disabled with --skip-voice.")
+            return True
+        if self.checkpoints.get(checkpoint_key, False) and not self.force:
+            print(f"[SKIP] Voiceover ({mode}) already completed, skipping...")
+            return True
+
+        engine = os.path.join(os.path.dirname(__file__), "tools", "audio", "tts_engine.py")
+        if not os.path.exists(engine):
+            print(f"[WARN] tts_engine.py not found at {engine}. Skipping the voiceover stage.")
+            return True
+
+        script_path = os.path.join(self.project_path, "voice_script.md")
+        if not os.path.exists(script_path):
+            script_path = os.path.join(self.project_path, "narrative_script.md")
+        if not os.path.exists(script_path):
+            print("[WARN] No script available for narration. Skipping the voiceover stage.")
+            return mode == "draft"
+
+        label = "Draft (timing pass)" if mode == "draft" else "Final (production render)"
+        print(f"\n[VOICE] --- Voiceover: {label} ---")
+
+        cmd = [sys.executable, engine, "--project", self.project_path, "--mode", mode, "--yes"]
+        if self.voice_provider:
+            cmd += ["--provider", self.voice_provider]
+        elif mode == "draft" and self.cli_runner == "mock":
+            cmd += ["--provider", "mock"]
+        if self.force:
+            cmd.append("--force")
+
+        try:
+            result = subprocess.run(cmd, capture_output=True, encoding="utf-8", errors="replace")
+        except Exception as e:
+            print(f"[FAIL] Could not launch the TTS engine: {e}")
+            return mode == "draft"
+
+        for line in (result.stdout or "").splitlines():
+            print(f"  {line}")
+        if result.returncode != 0:
+            print(f"[{'WARN' if mode == 'draft' else 'FAIL'}] Voiceover ({mode}) did not complete cleanly.")
+            if result.stderr:
+                print(f"  STDERR: {result.stderr.strip()[:600]}")
+            if mode == "draft":
+                print("  Continuing without a draft timing track.")
+                return True
+            return False
+
+        if mode == "final" and not self.run_narration_gate():
+            return False
+
+        self.checkpoints[checkpoint_key] = True
+        if mode == "final":
+            self.checkpoints["last_step"] = "voiceover"
+        self.save_checkpoints()
+        return True
+
+    def run_narration_gate(self):
+        """Quality gate for generated audio: exists, complete, on-target, not silent."""
+        validator = os.path.join(
+            os.path.dirname(__file__), "tools", "validators", "audio_validator.py"
+        )
+        if not os.path.exists(validator):
+            print("  [WARN] audio_validator.py not found. Skipping the narration gate.")
+            return True
+        print("[GATE]  Running narration quality gate...")
+        try:
+            result = subprocess.run(
+                [sys.executable, validator, self.project_path],
+                capture_output=True, encoding="utf-8", errors="replace",
+            )
+        except Exception as e:
+            print(f"  [WARN] Narration gate could not run: {e}")
+            return True
+        for line in (result.stdout or "").splitlines():
+            print(f"  {line}")
+        return result.returncode == 0
 
     def run_direction(self):
         if self.checkpoints["direction_complete"] and not self.force:
@@ -503,10 +713,30 @@ We are specifying the URLs and time ranges for the clips to be trimmed by the Ar
             )
             
             rerun_stage = None
-            for line in result.stdout.splitlines():
+            review_status = None
+            for line in (result.stdout or "").splitlines():
                 if line.startswith("RERUN_STAGE:"):
                     rerun_stage = line.replace("RERUN_STAGE:", "").strip()
-                    
+                elif line.startswith("REVIEW_STATUS:"):
+                    review_status = line.replace("REVIEW_STATUS:", "").strip().upper()
+
+            # FAIL CLOSED. Approval must be stated, never inferred from silence.
+            # Before v1.5.1 the only test was `if rerun_stage:` with an else-branch
+            # that printed "EIC APPROVED" - so a missing review_result.json, malformed
+            # JSON, an unrecognised verdict, or an agent name the rework engine did
+            # not know all resulted in an unreviewed video being declared finished
+            # (and, since v1.5, a paid narration render on top of it).
+            if review_status is None or review_status == "UNDETERMINED":
+                print("\n[FAIL] The EIC verdict could not be resolved. NOT treating this as approval.")
+                for line in (result.stdout or "").splitlines():
+                    if line.strip():
+                        print(f"  {line}")
+                if result.stderr:
+                    print(f"  STDERR: {result.stderr.strip()[:500]}")
+                print("\n  Fix the verdict and re-run with --resume. Checkpoints are untouched.")
+                print(f"  Verdict file: {os.path.join(self.project_path, 'review_result.json')}")
+                return False
+
             if rerun_stage:
                 # Reload checkpoints from disk to preserve the resets made by auto_rework.py
                 self.checkpoints = self.load_checkpoints()
@@ -524,6 +754,10 @@ We are specifying the URLs and time ranges for the clips to be trimmed by the Ar
                 print(f"\n[REWORK] EIC Rejected the audit. Triggering Rework Loop #{iterations + 1} starting from stage '{rerun_stage}'...")
                 # Loop back: re-run the pipeline from the rerun_stage
                 return "loop_back"
+            elif review_status == "REWORK":
+                # auto_rework said rework but could not emit a stage - do not proceed.
+                print("\n[FAIL] EIC requested rework but no stage was resolved.")
+                return False
             else:
                 print("\n[SUCCESS] EIC APPROVED! No rework required.")
                 self.checkpoints["rework_iterations"] = 0
@@ -555,7 +789,11 @@ We are specifying the URLs and time ranges for the clips to be trimmed by the Ar
             # Stage 2: Scriptwriting
             if not self.run_scriptwriting():
                 return False
-                
+
+            # Stage 2.5: Draft voiceover (free timing pass, feeds the Director)
+            if self.voice_draft_enabled():
+                self.run_voiceover("draft")
+
             # Stage 3: Direction
             if not self.run_direction():
                 return False
@@ -574,12 +812,23 @@ We are specifying the URLs and time ranges for the clips to be trimmed by the Ar
                 # Checkpoints were reset, we just restart the loop
                 # Disable force mode so it only runs what is reset (not everything)
                 self.force = False
+                # A rejected script invalidates any narration rendered from it.
+                self.checkpoints["voiceover_draft_complete"] = False
+                self.checkpoints["voiceover_final_complete"] = False
+                self.save_checkpoints()
                 continue
             elif not verdict:
                 return False
             else:
                 # approved!
                 break
+
+        # Stage 8: Final narration - rendered only once the EIC has signed off on
+        # the script, so a rewrite never means paying for the same audio twice.
+        if not self.run_voiceover("final"):
+            print("[FAIL] Final voiceover stage failed. Scripts and assets are intact; "
+                  "fix the reported issue and re-run with --resume.")
+            return False
                 
         print("\n[SUCCESS] Complete video production pipeline finished successfully!")
         return True
@@ -590,6 +839,10 @@ def main():
     parser.add_argument("--cli", default="auto", choices=["claude", "gemini", "opencode", "qwen", "auto", "mock"], help="CLI runner to use")
     parser.add_argument("--force", action="store_true", help="Force running stages even if complete")
     parser.add_argument("--rework-limit", type=int, default=3, help="Max EIC rework iterations")
+    parser.add_argument("--skip-voice", action="store_true",
+                        help="Skip the narration (TTS) stages entirely")
+    parser.add_argument("--voice-provider",
+                        help="Force a TTS provider: elevenlabs|sarvam|gemini|openai|piper|edge|mock")
     parser.add_argument("--resume", action="store_true", help="Resume from last checkpoint")
     parser.add_argument("--status", action="store_true", help="Show current workflow status")
     parser.add_argument("--next", action="store_true", help="Show what to do next")
@@ -604,7 +857,9 @@ def main():
         project_path=args.project,
         cli_runner=args.cli,
         force=args.force,
-        rework_limit=args.rework_limit
+        rework_limit=args.rework_limit,
+        skip_voice=args.skip_voice,
+        voice_provider=args.voice_provider,
     )
     
     # Status command - show current progress
@@ -620,10 +875,12 @@ def main():
         steps = [
             ("Investigation", "investigation_complete", "truth_dossier.md"),
             ("Scriptwriting", "scriptwriting_complete", "narrative_script.md"),
+            ("Voiceover (draft timing)", "voiceover_draft_complete", "assets/audio/narration/narration_draft.mp3"),
             ("Direction", "direction_complete", "master_script.md"),
             ("Visioning (AI Prompts)", "visionary_complete", "visual_prompts.md"),
             ("Scavenging", "scavenging_complete", "asset_manifest.md"),
             ("Archiving", "archiving_complete", "assets/"),
+            ("Voiceover (final)", "voiceover_final_complete", "assets/audio/narration/narration_full.mp3"),
         ]
         
         for step_name, checkpoint_key, output_file in steps:
@@ -643,11 +900,13 @@ def main():
         next_steps = {
             "none": ("Investigation", "investigator", "Create truth_dossier.md with research findings"),
             "investigation": ("Scriptwriting", "scriptwriter", "Create narrative_script.md from the dossier"),
-            "scriptwriting": ("Direction", "director", "Create master_script.md with visual directions"),
+            "scriptwriting": ("Direction", "director", "Create master_script.md with visual directions "
+                              "(a draft narration runs first for real timings)"),
+            "voiceover": ("EIC Review", "eic", "Narration rendered - audit the full package"),
             "direction": ("Visioning (AI Prompts) & Scavenging", "visionary / scavenger", "Create visual_prompts.md & asset_manifest.md"),
             "scavenging": ("Archiving", "archivist", "Download all assets to assets/ folder"),
             "archiving": ("EIC Review", "eic", "Audit all assets and scripts"),
-            "eic": ("Complete", None, "[SUCCESS] All done! Your video assets are ready for editing."),
+            "eic": ("Final Narration", "narrator", "Render the production voiceover from voice_script.md"),
         }
         
         last_step = orchestrator.checkpoints['last_step']

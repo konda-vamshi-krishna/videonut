@@ -1,100 +1,275 @@
-# The VideoNut Video Production Agency: User Guide
+# The VideoNut Production Agency — User Guide
 
-Welcome to your AI-powered production studio. This system transforms a simple idea into a fully researched, scripted, and asset-ready video project using five specialized AI agents.
+Welcome to your AI-powered production studio. VideoNut turns a single idea into a
+researched, scripted, **narrated** and asset-complete video project using
+**12 specialized AI agents**.
 
-This guide walks you through the entire lifecycle using a real-world example: **"The Irony of OpenAI using Google's Transformer."**
-
----
-
-## 🎭 The Cast (Your AI Team)
-
-1.  **🕵️ The Investigator:** Research & Facts. (Finds the story).
-2.  **✍️ The Scriptwriter:** Narrative & Emotion. (Writes the words).
-3.  **🎬 The Director:** Vision & Sourcing. (Visualizes the story).
-4.  **🎨 The Visionary:** AI Art & Video Prompts. (Creates prompts for custom scenes).
-5.  **🦅 The Scavenger:** Asset Hunting. (Finds the clips/images).
-6.  **💾 The Archivist:** Asset Storage. (Downloads the files).
-7.  **🧐 The Editor-in-Chief (EIC):** Quality Control. (Validates everything).
+This guide walks the full lifecycle with a real example:
+**"The Irony of OpenAI using Google's Transformer."**
 
 ---
 
-## 🚀 The Workflow: From Zero to Hero
+## 🎭 The Cast
 
-### Step 1: The Brief (Investigator)
-...
+**Research**
 
-### Step 2: The Soul (Scriptwriter)
-**Goal:** Turn the dry dossier into a human "Narrative Script."
+| # | Agent | Command | Does |
+|---|---|---|---|
+| 1 | 📡 **Topic Scout** | `/topic_scout` | Finds a trending, under-covered topic and creates the project folder |
+| 2 | 🎯 **Prompt Agent** | `/prompt` | Turns the topic into focused research questions |
+| 3 | 🕵️ **Investigator** ("Sherlock") | `/investigator` | Deep research with sourced facts and video timestamps |
 
-1.  **Type:** `/scriptwriter`
-2.  **Agent Action:** Sorkin reads the `truth_dossier.md`. He crafts the hook, ensures the 360-degree perspective, and writes the emotional narration.
-3.  **Result:** A file is created at `_output/narrative_script.md`.
+**Creative**
 
-### Step 3: The Vision (Director)
-**Goal:** Turn the narration into a cinematic "Master Script" with visual links.
+| # | Agent | Command | Does |
+|---|---|---|---|
+| 4 | ✍️ **Scriptwriter** ("Sorkin") | `/scriptwriter` | Writes the narration with hooks, beats and voice cues |
+| 5 | 🎙️ **Narrator** ("Attenborough") | `/narrator` | Renders the script to real voiceover audio |
+| 6 | 🎬 **Director** ("Spielberg") | `/director` | Designs shots, timed against the real narration |
+| 7 | 🎨 **Visionary** | `/visionary` | Writes AI image/video prompts for scenes with no footage |
+| 8 | 🎨 **Thumbnail** ("Canvas") | `/thumbnail` | Click-worthy thumbnail prompts |
+| 9 | 🔍 **SEO** ("Ranker") | `/seo` | Titles, descriptions, tags |
 
-1.  **Type:** `/director`
-2.  **Agent Action:** Spielberg reads the `narrative_script.md`. He designs shots for every paragraph and finds the specific source URLs for the evidence.
-3.  **Result:** A file is created at `_output/master_script.md`.
+**Technical & Core**
 
----
-
-### Step 3.5: The Prompter (Visionary)
-**Goal:** Create highly detailed prompts for AI-generated images and videos where stock or real-world assets are missing.
-
-1.  **Type:** `/visionary`
-2.  **Agent Action:** Visionary reads the `video_direction.md` and `master_script.md`. He identifies scenes marked for custom generation, creates consistent visual style guides, and writes copy-pasteable prompts for Midjourney, Flux, Sora, or Runway.
-3.  **Result:** A file is created at `_output/visual_prompts.md`.
-
----
-
-### Step 3: The Quality Check (Editor-in-Chief)
-**Goal:** Ensure the script is accurate and entertaining before hunting for assets.
-
-1.  **Type:** `/eic`
-2.  **Agent Says:** "The desk is clear, Producer. Chief here."
-3.  **You Select:** `[RV] Review Project Status` (Type `RV` or `2`).
-4.  **Agent Action:** The Chief reads both the Dossier and the Script. He checks:
-    *   **Fact Check:** Is the 2017 date correct?
-    *   **Narrative Check:** Is the hook boring?
-5.  **Result:** He gives you a Pass/Fail report.
-    *   *If Fail:* You go back to `/director` and ask for edits.
-    *   *If Pass:* You proceed to Step 4.
-6.  **Next:** Dismiss the agent with `DA`.
+| # | Agent | Command | Does |
+|---|---|---|---|
+| 10 | 🦅 **Scavenger** ("Hunter") | `/scavenger` | Finds and verifies asset URLs |
+| 11 | 💾 **Archivist** ("Vault") | `/archivist` | Downloads everything |
+| 12 | 🧐 **Editor-in-Chief** ("Chief") | `/eic` | 10-phase audit; gates the whole pipeline |
 
 ---
 
-### Step 4: The Hunt (Scavenger)
-**Goal:** Find real URLs for every visual described in the script.
+## 📁 Where your files go
 
-1.  **Type:** `/scavenger`
-2.  **Agent Says:** "Eyes in the sky... Hunter online."
-3.  **You Select:** `[FA] Find Assets` (Type `FA` or `2`).
-4.  **Agent Action:** Hunter reads the `master_script.md`. For every "Visual" line, he searches YouTube, Google Images, or Twitter.
-    *   *Script:* "Show the 'Attention Is All You Need' paper abstract."
-    *   *Hunter:* Finds the arXiv PDF link or a screenshot URL.
-5.  **Result:** A file is created at `_output/asset_manifest.md` containing a list of links.
-6.  **Next:** Dismiss the agent with `DA`.
+Everything lives in **`Projects/<your-project-name>/`**. There is no `_output/`
+folder — older versions of this guide said there was; they were wrong.
+
+```
+Projects/openai-transformer-irony/
+├── topic_brief.md            # Topic Scout
+├── prompt.md                 # Prompt Agent
+├── truth_dossier.md          # Investigator
+├── voice_script.md           # Scriptwriter  ← what the Narrator reads
+├── narrative_script.md       # Scriptwriter
+├── master_script.md          # Director
+├── video_direction.md        # Director
+├── visual_prompts.md         # Visionary
+├── asset_manifest.md         # Scavenger
+├── voiceover_report.md       # Narrator
+├── review_report.md          # EIC
+├── assets/
+│   ├── audio/narration/
+│   │   ├── narration_full.mp3      ← your finished voiceover
+│   │   ├── narration_cues.md       ← section → timecode map
+│   │   ├── narration_manifest.json
+│   │   └── segments/
+│   ├── 001_clip.mp4
+│   └── 002_chart.png
+└── .workflow_checkpoint.json # Resume state — do not delete mid-run
+```
 
 ---
 
-### Step 5: The Heist (Archivist)
-**Goal:** Download all the files to your hard drive.
+## 🚀 The Workflow
 
-1.  **Type:** `/archivist`
-2.  **Agent Says:** "Vault online."
-3.  **You Select:** `[DL] Download Assets` (Type `DL` or `2`).
-4.  **Agent Action:** Vault reads the `asset_manifest.md`. He uses tools (like `yt-dlp` or `wget`) to physically download the images and videos.
-5.  **Result:** Your assets appear in `_output/raw_assets/` organized by scene.
-6.  **Next:** Dismiss the agent with `DA`.
+### Step 0 — Set up once
+
+```bash
+npx videonut init          # installs Python, FFmpeg, and your chosen AI CLI
+cp .env.example .env       # add one TTS API key (optional but recommended)
+python _video_nut/tools/check_env.py
+```
+
+`check_env.py` tells you which TTS providers are ready. With none configured,
+narration still works — it falls back to free voices.
 
 ---
 
-## 🎉 Conclusion
+### Step 1 — The Topic (`/topic_scout`)
 
-You now have:
-1.  A researched Dossier.
-2.  A cinematic Script.
-3.  A folder full of Video/Image assets.
+Finds a topic with real search demand and weak competition, then creates the
+project folder. Skip it if you already know what you are making.
 
-**You are ready to edit!** Open your video editor (Premiere, Davinci) and drag in the files.
+**Result:** `topic_brief.md`
+
+---
+
+### Step 2 — The Questions (`/prompt`)
+
+Converts the brief into the specific questions the Investigator must answer.
+
+**Result:** `prompt.md`
+
+---
+
+### Step 3 — The Brief (`/investigator`)
+
+Sherlock researches the questions, records every source URL, and timestamps any
+video evidence. He also grades the topic's volatility — a fast-moving story gets
+re-checked before publication.
+
+**Result:** `truth_dossier.md`
+
+---
+
+### Step 4 — The Soul (`/scriptwriter`)
+
+Sorkin reads the dossier and writes the narration: the hook, the 360-degree
+perspective, the emotional beats. He produces **two** files:
+
+- `voice_script.md` — pure narration with section markers and voice cues. This is
+  the file that gets read aloud, so it must contain no URLs and no shot directions.
+- `narrative_script.md` — the same story with context for the Director.
+
+The voice cues are instructions to the Narrator:
+
+```
+[HOOK]
+(modulation pitch: low speed: slow tone: grave) In 2017, eight researchers
+published a paper. (end modulation)
+(pause 2s)
+(emphasis) Eight pages. (end emphasis) That is all it took.
+```
+
+**Result:** `voice_script.md`, `narrative_script.md`
+
+---
+
+### Step 5 — The Voice, draft pass (`/narrator`)
+
+**Goal:** get a real runtime before anyone times a single shot.
+
+1. Type `/narrator`
+2. Select **[2] Draft render**
+3. The Narrator renders on a free provider and writes a cue sheet.
+
+This costs nothing and takes under a minute. It exists because word count is a
+bad predictor of runtime — pauses, emphasis and delivery routinely move the true
+length 15–20 %. The Director now cuts against measured timecodes:
+
+```
+HOOK        0:00.0 – 0:18.8
+BRIDGE      0:18.8 – 0:31.8
+MEAT        0:31.8 – 1:09.0
+HUMAN BEAT  1:09.0 – 1:18.6
+VERDICT     1:18.6 – 1:30.6
+CTA         1:30.6 – 1:38.6
+```
+
+If the runtime is far off your target, fix it **now** by cutting or extending the
+script — not later by speeding up the voice.
+
+**Result:** `assets/audio/narration/narration_draft.mp3`, `narration_cues.md`
+
+---
+
+### Step 6 — The Vision (`/director`)
+
+Spielberg designs a shot for every paragraph and finds the source URL for every
+piece of evidence — now against the real narration timings.
+
+**Result:** `master_script.md`, `video_direction.md`
+
+---
+
+### Step 7 — The Prompts (`/visionary`)
+
+For scenes where no footage exists, the Visionary writes copy-pasteable prompts
+for Midjourney, Flux, Sora or Runway, with a consistent style guide.
+
+**Result:** `visual_prompts.md`
+
+---
+
+### Step 8 — The Hunt (`/scavenger`)
+
+Hunter reads `master_script.md` and finds a real, verified URL for every visual.
+
+> *Script:* "Show the 'Attention Is All You Need' paper abstract."
+> *Hunter:* finds the arXiv PDF and the exact page.
+
+**Result:** `asset_manifest.md`
+
+---
+
+### Step 9 — The Heist (`/archivist`)
+
+Vault downloads everything with `yt-dlp`, Playwright and friends, organized by scene.
+
+**Result:** `assets/`
+
+---
+
+### Step 10 — The Quality Check (`/eic`)
+
+Chief runs a 10-phase audit: file existence, config compliance, fact-checking
+against the dossier, script quality, plagiarism proximity, asset verification,
+voice-cue readiness, and pipeline staleness.
+
+- **If it fails:** Chief names the failing stage. Run that agent again — the
+  orchestrator resets only the affected checkpoints, so you never redo the whole run.
+- **If it passes:** continue to the final narration.
+
+**Result:** `review_report.md`, `review_result.json`
+
+---
+
+### Step 11 — The Voice, final pass (`/narrator`)
+
+1. Type `/narrator`
+2. Select **[3] Generate FINAL narration**
+3. Review the cost estimate. Nothing is billed until you say yes.
+4. The Narrator renders on your production provider, then automatically runs the
+   narration quality gate.
+
+**Result:** `assets/audio/narration/narration_full.mp3` — drop it on the timeline
+at 00:00:00.000. Every cue-sheet timecode is absolute and gap-free, so your shot
+list lines up without re-syncing.
+
+See [docs/VOICE_AGENT.md](docs/VOICE_AGENT.md) for providers, costs and cue grammar.
+
+---
+
+### Step 12 — The Package (`/thumbnail`, `/seo`)
+
+Thumbnail prompts and an optimized title/description/tag set.
+
+---
+
+## 🤖 Running it all at once
+
+```bash
+python _video_nut/workflow_orchestrator.py --project "Projects/My Video" --cli gemini
+```
+
+| Flag | Effect |
+|---|---|
+| `--status` | Show which stages are complete |
+| `--next` | Show the next command to run |
+| `--resume` | Continue from the last checkpoint |
+| `--force` | Re-run stages that are already complete |
+| `--skip-voice` | Skip both narration passes |
+| `--voice-provider elevenlabs` | Force a TTS backend |
+| `--cli mock` | Dry-run the whole pipeline with no API calls |
+
+---
+
+## 🆘 Troubleshooting
+
+| Problem | Fix |
+|---|---|
+| Agent produced nothing | `python _video_nut/tools/check_env.py` — your CLI is probably not on PATH |
+| "Validation FAILED" at a gate | The message names the file and the missing element. Re-run that agent. |
+| Narration has no API key | `cp .env.example .env` and add one key. Or accept the free fallback. |
+| Narration is too long | Cut words. Never fix runtime with playback speed. |
+| `voiceover: STALE` | You edited the script after rendering. Re-render. |
+| Want to start over | Delete `.workflow_checkpoint.json` in the project folder |
+
+---
+
+## 🎉 You are ready to edit
+
+You have a sourced dossier, a cinematic script, a finished voiceover with exact
+timecodes, and a folder of verified assets. Open Premiere or DaVinci, drop
+`narration_full.mp3` at zero, and cut against `narration_cues.md`.

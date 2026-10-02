@@ -1,0 +1,191 @@
+name: CI
+
+# The v1 audit found five separate defects that a green pipeline would have
+# caught before release - most seriously a published npm package that contained
+# zero agent files, and a review gate that reported "APPROVED" when it had
+# actually failed. Both shipped because nothing ran on push.
+#
+# Every job here maps to a finding:
+#   tests        -> F10 (no tests at all), F13/F15 (silent cross-agent drift)
+#   package      -> F1  (published package was missing its agents)
+#   agent-drift  -> F7  (agent personas are compiled; the copies went stale)
+#   hygiene      -> F4/F6 (author machine paths and .pyc shipped to users)
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    name: Regression suite (Python ${{ matrix.python }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # 3.9 is the realistic floor for users on older distros; 3.12 is what
+        # most people have now. The suite is stdlib-only, so both must pass.
+        python: ["3.9", "3.12"]
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Install ffmpeg
+        # Without it the suite still passes but silently SKIPS every audio
+        # render test, which would hide exactly the bugs they exist to catch.
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
+          ffmpeg -version | head -1
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      - name: Byte-compile every shipped Python file
+        # A syntax error in an agent tool is invisible until a user runs that
+        # one agent, hours into a pipeline run.
+        run: python -m compileall -q _video_nut tests
+
+      - name: Run the regression suite
+        run: python tests/run_tests.py
+
+      - name: Assert the audio tests were not skipped
+        # A suite that skips its hardest tests and still prints green is worse
+        # than no suite. Fail if ffmpeg went missing.
+        run: |
+          python tests/run_tests.py | tee /tmp/out.txt
+          if grep -q "audio render tests were skipped" /tmp/out.txt; then
+            echo "::error::ffmpeg was unavailable - audio tests did not run."
+            exit 1
+          fi
+
+  package:
+    name: npm package is publishable
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "20"
+
+      - name: Verify the package stages every asset it promises
+        working-directory: _video_nut
+        run: npm run verify-package
+
+      - name: Pack and inspect the real tarball
+        working-directory: _video_nut
+        # verify-package checks the staging step; this checks what npm would
+        # actually upload. F1 slipped through precisely because those differ.
+        run: |
+          npm pack --silent
+          TARBALL=$(ls -1 *.tgz | head -1)
+          echo "Inspecting $TARBALL"
+          tar -tzf "$TARBALL" > /tmp/files.txt
+          wc -l < /tmp/files.txt | xargs echo "files in tarball:"
+
+          fail=0
+          for dir in .claude .gemini .qwen .opencode .hermes .codex .antigravity; do
+            n=$(grep -c "package/$dir/" /tmp/files.txt || true)
+            if [ "$n" -eq 0 ]; then
+              echo "::error::$dir/ is missing from the tarball - this is the F1 regression."
+              fail=1
+            else
+              echo "  OK  $dir/ ($n files)"
+            fi
+          done
+
+          # Every tool on disk must be in the tarball. A new tools/<x>.py that
+          # package.json does not ship means an agent tells the user to run a
+          # file they do not have - the F1 failure mode, one directory down.
+          cd "$GITHUB_WORKSPACE/_video_nut"
+          while read -r t; do
+            if ! grep -q "package/$t$" /tmp/files.txt; then
+              echo "::error::$t exists but is not in the tarball - add it to package.json files[]"
+              fail=1
+            fi
+          done < <(find tools -name '*.py' | sort)
+          echo "  checked $(find tools -name '*.py' | wc -l) tool files"
+
+          if grep -q "__pycache__" /tmp/files.txt; then
+            echo "::error::compiled bytecode is in the tarball"
+            fail=1
+          fi
+          if grep -qE "package/\.env$" /tmp/files.txt; then
+            echo "::error::a .env file is in the tarball"
+            fail=1
+          fi
+          exit $fail
+
+  agent-drift:
+    name: Compiled agents match their source
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Recompile the agent fan-out
+        # Personas in _video_nut/agents/** are compiled into eight CLI-specific
+        # folders. Editing a persona without re-running the generator leaves
+        # seven stale copies that no one notices until a user runs that CLI.
+        run: python _video_nut/scratch/generate_agents.py
+
+      - name: Fail if anything changed
+        run: |
+          find . -name __pycache__ -type d -not -path "./.git/*" -exec rm -rf {} + 2>/dev/null || true
+          if ! git diff --quiet; then
+            echo "::error::Compiled agent copies are stale. Run: python _video_nut/scratch/generate_agents.py"
+            git diff --stat
+            exit 1
+          fi
+          echo "All compiled agent copies are in sync."
+
+  hygiene:
+    name: Nothing private or machine-specific is tracked
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: No author-machine absolute paths
+        run: |
+          # Prose that *documents* the bug is not the bug.
+          if grep -rInE "[A-Z]:\\\\(youtuber|Users)" \
+               --include="*.py" --include="*.js" --include="*.json" \
+               --include="*.yaml" --include="*.yml" . ; then
+            echo "::error::a hardcoded author path is tracked in git"
+            exit 1
+          fi
+          echo "No hardcoded author paths."
+
+      - name: No secrets, no bytecode
+        run: |
+          fail=0
+          if git ls-files | grep -qE "(^|/)\.env$"; then
+            echo "::error::a .env file is tracked in git"; fail=1
+          fi
+          if git ls-files | grep -q "__pycache__\|\.pyc$"; then
+            echo "::error::compiled bytecode is tracked in git"; fail=1
+          fi
+          # An API key committed by accident is the one mistake you cannot undo
+          # with a revert - the key is burned the moment it is pushed.
+          if git ls-files -z | xargs -0 grep -lIE "(sk-[A-Za-z0-9]{20,}|AIza[A-Za-z0-9_-]{30,})" 2>/dev/null; then
+            echo "::error::what looks like a live API key is tracked in git"; fail=1
+          fi
+          [ $fail -eq 0 ] && echo "Clean."
+          exit $fail

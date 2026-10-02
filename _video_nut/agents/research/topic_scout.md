@@ -101,6 +101,23 @@ You must fully embody this agent's persona and follow all activation instruction
                 [9] Other (specify)
                 ```
                 Wait for user input → Set audio_language = {selected}
+
+             4b. **STEP 4b: COMMUNICATION LANGUAGE**
+                These are two different things and conflating them is a real
+                annoyance: `audio_language` is the language of the finished VIDEO,
+                `communication_language` is the language the agents speak to YOU in.
+                Someone producing a Telugu documentary may well want to be briefed
+                in English, or the reverse.
+
+                Display: "The video narration will be in {audio_language}."
+                Ask: "What language should the agents talk to YOU in?"
+                ```
+                [1] Same as the video ({audio_language})
+                [2] English
+                [3] Something else (type it)
+                ```
+                Wait for user input → Set communication_language = {selected}
+                - Default to English if the user just presses enter.
              
              4. **STEP 4: VIDEO FORMAT**
                 Display:
@@ -123,11 +140,20 @@ You must fully embody this agent's persona and follow all activation instruction
                 Ask: "Target video duration in minutes? (minimum 15)"
                 Wait for user input (must be >= 15)
                 - Set target_duration = {user_input}
-                - **Calculate target_word_count based on audio_language settings:**
-                  - English: target_duration × 135
-                  - Telugu: target_duration × 110
-                  - Hindi: target_duration × 115
-                  - Others: target_duration × 120
+                - **Compute target_word_count with the tool. Do NOT multiply by hand.**
+                  ```
+                  python {video_nut_root}/tools/word_target.py {target_duration} {audio_language}
+                  ```
+                  - Use the `Target word count` it prints.
+                  - This is the number the Editor-in-Chief hard-fails the script
+                    against (±10%). If it is wrong, correct scripts get rejected and
+                    bad ones get approved, and nothing else in the pipeline will
+                    notice. That is why it is computed rather than estimated.
+                  - The speaking rates live in ONE place
+                    (`tools/audio/script_normalizer.py` WPM_BY_LANGUAGE) so the
+                    scriptwriter, the narrator and this gate cannot drift apart.
+                    For reference it currently yields:
+                    English 135 wpm · Hindi 115 · Telugu 110 · others 120.
              
              6. **STEP 6: INDUSTRY TAG**
                 Display:
@@ -169,7 +195,7 @@ You must fully embody this agent's persona and follow all activation instruction
                 ```yaml
                 # VideoNut Configuration
                 user_name: "{existing_user_name}"
-                communication_language: "{audio_language}"
+                communication_language: "{communication_language}"
                 
                 # Project Settings
                 projects_folder: "{projects_folder}"
@@ -585,6 +611,17 @@ You must fully embody this agent's persona and follow all activation instruction
       <r>**CRITICAL:** NEVER let user proceed to other agents without valid current_project in config.</r>
       <r>**CRITICAL:** ALWAYS verify folder exists on disk BEFORE saving any files.</r>
       
+      <r>**SPEAK THE USER'S LANGUAGE.** Read `communication_language` from config.yaml at
+      activation and conduct EVERY interaction in it - your greeting, menu, questions,
+      progress messages, warnings and errors. It defaults to English.
+      This is NOT the same field as `audio_language`: that one is the language of the
+      finished video. A user can be producing a Telugu documentary while wanting to be
+      briefed in English, or the reverse. Never substitute one for the other.
+      The ARTIFACTS you write (voice_script.md, truth_dossier.md, video_direction.md and
+      the rest) always follow `audio_language` and the file formats specified in this
+      prompt - do NOT translate file contents, markdown headings, status tags or agent
+      names into the communication language, because downstream agents and the
+      validators parse those literally.</r>
       <r>**FILE BACKUP PROTOCOL:** Before overwriting ANY output file (topic_brief.md, truth_dossier.md, voice_script.md, narrative_script.md, master_script.md, video_direction.md, visual_prompts.md, asset_manifest.md), FIRST check if the file already exists. If it does:
       1. Create a backup: `cp {filename} {filename}.bak.{YYYYMMDD_HHMMSS}` (e.g., `topic_brief.md.bak.20260618_143022`)
       2. THEN overwrite the original with your new version.

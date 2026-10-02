@@ -11,3 +11,7 @@ pdfplumber
 faster-whisper
 ntscraper
 rapidfuzz
+
+# Configuration parsing (config.yaml). Without this the TTS engine falls back
+# to a minimal built-in YAML reader, which only handles simple key: value blocks.
+PyYAML

@@ -50,6 +50,66 @@ industry_tag: ""
 # Social Awareness: NGO reports, Government schemes, RTI data
 
 # ═══════════════════════════════════════════════════════════════════
+# VOICE / NARRATION (Used by the Narrator agent + tools/audio/tts_engine.py)
+# ═══════════════════════════════════════════════════════════════════
+# ⚠️  NEVER put API keys in this file - it is committed to git.
+#     Keys go in .env at the repo root (see .env.example). The engine loads them
+#     automatically: ELEVENLABS_API_KEY / SARVAM_API_KEY / GEMINI_API_KEY / OPENAI_API_KEY
+voice:
+  enabled: true
+
+  # provider: auto | elevenlabs | sarvam | gemini | openai | kokoro | piper | edge | mock
+  #   auto  -> routes by audio_language: Indic -> sarvam, otherwise elevenlabs,
+  #            then falls back down the chain to whatever actually has a key.
+  provider: "auto"
+
+  # prefer_local: put the local CPU model (Kokoro-82M) at the FRONT of the auto
+  # chain instead of near the back. Turn this on if you render long videos
+  # regularly - a 20-minute script is ~16,000 characters, which is a real bill on
+  # a paid API every time you re-render, and Kokoro is free, offline and close
+  # enough in quality (UTMOS ~4.45) that most listeners will not flag it.
+  #   Setup:  pip install kokoro-onnx soundfile     (~300MB, no GPU, no key)
+  #   Speed:  roughly 1.5-3x real-time on a plain CPU
+  #           -> a 15-min narration renders in about 6-10 min
+  #   Covers: English (US/UK) + Hindi, French, Spanish, Italian, Portuguese,
+  #           Japanese, Korean, Mandarin. NOT Telugu - those route to Sarvam.
+  prefer_local: false
+
+  # Cheap/local backend for the draft timing pass (no spend, no keys needed).
+  # "auto" here means kokoro -> piper -> edge -> mock, never a paid API.
+  draft_provider: "auto"
+
+  # Leave blank to use each provider's VideoNut default voice.
+  #   elevenlabs -> voice_id from your ElevenLabs library
+  #   sarvam     -> speaker name (shubh, anushka, priya, ...)
+  #   gemini     -> prebuilt voice name (Charon, Kore, Puck, ...)
+  #   openai     -> onyx | alloy | nova | ...
+  #   kokoro     -> am_michael | bm_george | af_heart | hf_alpha (Hindi) ...
+  voice: ""
+  model: ""
+
+  # Delivery
+  pace: 1.0              # 0.5 - 2.0
+  stability: 0.45        # ElevenLabs: lower = more expressive, higher = more consistent
+  similarity: 0.8
+  style_prompt: "Authoritative investigative documentary narrator. Measured, credible, never theatrical."
+
+  # Output
+  output_format: "mp3"   # mp3 | wav
+  sample_rate: 44100
+  normalize_loudness: true
+  loudness_lufs: -14.0   # YouTube normalises to roughly -14 LUFS
+
+  # Engine behaviour
+  max_chars_per_request: 0   # 0 = use each provider's own safe cap
+  concurrency: 3
+  retries: 3
+  cache: true                # content-hash cache: never pay twice for the same sentence
+  draft_pass: true           # run a free draft render after scriptwriting for real timings
+  cost_ceiling_usd: 25.0     # hard stop before an accidental expensive render
+  fallback_chain: []         # e.g. ["kokoro", "sarvam", "elevenlabs", "mock"]
+
+# ═══════════════════════════════════════════════════════════════════
 # EIC CORRECTION TRACKING (Set by EIC after review)
 # ═══════════════════════════════════════════════════════════════════
 # correction_log: Path to the correction log file (relative to project folder)
