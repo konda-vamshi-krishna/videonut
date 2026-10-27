@@ -33,6 +33,9 @@ const colors = {
 };
 
 function log(msg, color = 'reset') {
+    if (process.stdout.isTTY) {
+        process.stdout.write('\r\x1b[K');
+    }
     console.log(`${colors[color]}${msg}${colors.reset}`);
 }
 
@@ -46,7 +49,13 @@ function success(msg) { log(`✅ ${msg}`, 'green'); }
 function warning(msg) { log(`⚠️  ${msg}`, 'yellow'); }
 function error(msg) { log(`❌ ${msg}`, 'red'); }
 function info(msg) { log(`ℹ️  ${msg}`, 'cyan'); }
-function progress(msg) { process.stdout.write(`\r⏳ ${msg}`); }
+function progress(msg) {
+    if (process.stdout.isTTY) {
+        process.stdout.write(`\r\x1b[K⏳ ${msg}`);
+    } else {
+        console.log(`⏳ ${msg}`);
+    }
+}
 
 // Check if command exists
 function commandExists(cmd) {

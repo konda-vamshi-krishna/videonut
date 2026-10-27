@@ -27,7 +27,7 @@ concurrency:
 jobs:
   tests:
     name: Regression suite (Python ${{ matrix.python }})
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
@@ -74,7 +74,7 @@ jobs:
 
   package:
     name: npm package is publishable
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
 
@@ -132,7 +132,7 @@ jobs:
 
   agent-drift:
     name: Compiled agents match their source
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
 
@@ -158,7 +158,7 @@ jobs:
 
   hygiene:
     name: Nothing private or machine-specific is tracked
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
 
