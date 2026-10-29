@@ -46,7 +46,7 @@ function success(msg) { log(`✅ ${msg}`, 'green'); }
 function warning(msg) { log(`⚠️  ${msg}`, 'yellow'); }
 function error(msg) { log(`❌ ${msg}`, 'red'); }
 function info(msg) { log(`ℹ️  ${msg}`, 'cyan'); }
-function progress(msg) { process.stdout.write(`\r⏳ ${msg}`); }
+function progress(msg) { process.stdout.write(`\r\x1b[K⏳ ${msg}`); }
 
 // Check if command exists
 function commandExists(cmd) {
