@@ -203,22 +203,35 @@ class ScriptStats:
 # Markdown cleanup
 # ──────────────────────────────────────────────────────────────────────────────
 
+RE_MD_HEADING = re.compile(r"^#{1,6}\s*")
+RE_MD_BULLETS = re.compile(r"^\s*[-*+]\s+")
+RE_MD_QUOTE = re.compile(r"^\s*>\s?")
+RE_MD_BOLD1 = re.compile(r"\*\*(.+?)\*\*")
+RE_MD_ITALICS1 = re.compile(r"(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)")
+RE_MD_BOLD2 = re.compile(r"__(.+?)__")
+RE_MD_ITALICS2 = re.compile(r"(?<![\w_])_([^_]+)_(?![\w_])")
+RE_MD_STRIKE = re.compile(r"~~(.+?)~~")
+RE_MD_CODE = re.compile(r"`{1,3}([^`]*)`{1,3}")
+RE_MD_IMG = re.compile(r"!\[[^\]]*\]\([^)]*\)")
+RE_MD_LINK = re.compile(r"\[([^\]]+)\]\([^)]*\)")
+RE_MD_TABLE = re.compile(r"^\s*\|.*\|\s*$")
+RE_MD_HR = re.compile(r"^\s*[-=_]{3,}\s*$")
 
 def strip_markdown(line: str) -> str:
     """Remove markdown chrome that must never be spoken aloud."""
-    line = re.sub(r"^#{1,6}\s*", "", line)          # headings
-    line = re.sub(r"^\s*[-*+]\s+", "", line)         # bullets
-    line = re.sub(r"^\s*>\s?", "", line)             # block quotes
-    line = re.sub(r"\*\*(.+?)\*\*", r"\1", line)     # bold
-    line = re.sub(r"(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)", r"\1", line)  # *italics*
-    line = re.sub(r"__(.+?)__", r"\1", line)        # __bold__
-    line = re.sub(r"(?<![\w_])_([^_]+)_(?![\w_])", r"\1", line)  # _italics_
-    line = re.sub(r"~~(.+?)~~", r"\1", line)        # ~~strikethrough~~
-    line = re.sub(r"`{1,3}([^`]*)`{1,3}", r"\1", line)  # inline code
-    line = re.sub(r"!\[[^\]]*\]\([^)]*\)", "", line)   # images
-    line = re.sub(r"\[([^\]]+)\]\([^)]*\)", r"\1", line)  # links -> label
-    line = re.sub(r"^\s*\|.*\|\s*$", "", line)       # table rows
-    line = re.sub(r"^\s*[-=_]{3,}\s*$", "", line)    # horizontal rules
+    line = RE_MD_HEADING.sub("", line)          # headings
+    line = RE_MD_BULLETS.sub("", line)         # bullets
+    line = RE_MD_QUOTE.sub("", line)             # block quotes
+    line = RE_MD_BOLD1.sub(r"\1", line)     # bold
+    line = RE_MD_ITALICS1.sub(r"\1", line)  # *italics*
+    line = RE_MD_BOLD2.sub(r"\1", line)        # __bold__
+    line = RE_MD_ITALICS2.sub(r"\1", line)  # _italics_
+    line = RE_MD_STRIKE.sub(r"\1", line)        # ~~strikethrough~~
+    line = RE_MD_CODE.sub(r"\1", line)  # inline code
+    line = RE_MD_IMG.sub("", line)   # images
+    line = RE_MD_LINK.sub(r"\1", line)  # links -> label
+    line = RE_MD_TABLE.sub("", line)       # table rows
+    line = RE_MD_HR.sub("", line)    # horizontal rules
     return line.strip()
 
 

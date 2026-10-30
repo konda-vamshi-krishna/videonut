@@ -30,9 +30,10 @@ def detect_stale_stages(project_path):
 
     # Helper to get mtime, returns 0 if doesn't exist
     def get_mtime(path):
-        if os.path.exists(path):
+        try:
             return os.path.getmtime(path)
-        return 0
+        except OSError:
+            return 0
 
     t_brief = get_mtime(brief_path)
     t_dossier = get_mtime(dossier_path)
