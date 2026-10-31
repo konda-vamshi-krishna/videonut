@@ -13,6 +13,18 @@ from datetime import datetime
 import shutil
 import concurrent.futures
 
+sys.path.insert(0, os.path.dirname(__file__))
+from tools.validators.stale_detector import detect_stale_stages
+from tools.validators.output_validator import (
+    validate_dossier,
+    validate_script,
+    validate_voice_script,
+    validate_master_script,
+    validate_manifest,
+    validate_project,
+)
+from tools.validators.audio_validator import validate_narration
+
 # Enforce UTF-8 output encoding for Windows terminal safety
 if hasattr(sys.stdout, 'reconfigure'):
     sys.stdout.reconfigure(encoding='utf-8')
@@ -411,24 +423,26 @@ We are specifying the URLs and time ranges for the clips to be trimmed by the Ar
 
     def run_validation_gate(self, val_type, file_path):
         """Runs the output_validator.py script as a gate check."""
-        validator_script = os.path.join(os.path.dirname(__file__), "tools", "validators", "output_validator.py")
-        if not os.path.exists(validator_script):
-            print(f"⚠️  Validator script '{validator_script}' not found. Skipping gate.")
-            return True
-            
         print(f"[GATE]  Running validation gate for '{val_type}' on '{os.path.basename(file_path)}'...")
         try:
-            result = subprocess.run(
-                [sys.executable, validator_script, val_type, file_path],
-                capture_output=True,
-                encoding='utf-8'
-            )
-            if result.returncode == 0:
-                print(f"  {result.stdout.strip()}")
+            dispatch = {
+                "dossier": validate_dossier,
+                "script": validate_script,
+                "voice": validate_voice_script,
+                "master": validate_master_script,
+                "manifest": validate_manifest,
+                "project": validate_project,
+            }
+            if val_type not in dispatch:
+                print(f"⚠️  Unknown validation type: {val_type}. Skipping gate.")
+                return True
+
+            success, msg = dispatch[val_type](file_path)
+            if success:
+                print(f"  [OK] Validation PASSED: {msg}")
                 return True
             else:
-                print(f"[FAIL] Gate FAILED: {result.stdout.strip()}")
-                print(f"  Error Details: {result.stderr.strip()}")
+                print(f"[FAIL] Gate FAILED: {msg}")
                 return False
         except Exception as e:
             print(f"[FAIL] Error running validator gate: {str(e)}")
@@ -436,26 +450,15 @@ We are specifying the URLs and time ranges for the clips to be trimmed by the Ar
 
     def run_stale_detection(self):
         """Runs the stale_detector.py script to flag outdated files."""
-        detector_script = os.path.join(os.path.dirname(__file__), "tools", "validators", "stale_detector.py")
-        if not os.path.exists(detector_script):
-            return
-            
         print("[SCAN] Scanning for stale pipeline stages...")
         try:
-            result = subprocess.run(
-                [sys.executable, detector_script, self.project_path],
-                capture_output=True,
-                encoding='utf-8'
-            )
-            for line in result.stdout.splitlines():
-                if line.startswith("STALE_JSON:"):
-                    stale_data = json.loads(line.replace("STALE_JSON:", "").strip())
-                    for stage, is_stale in stale_data.items():
-                        if is_stale:
-                            key = f"{stage}_complete" if stage != "scavenging" else "scavenging_complete"
-                            if self.checkpoints.get(key, False):
-                                print(f"  - Resetting stale stage '{stage}' to incomplete.")
-                                self.checkpoints[key] = False
+            stale_data = detect_stale_stages(self.project_path)
+            for stage, is_stale in stale_data.items():
+                if is_stale:
+                    key = f"{stage}_complete" if stage != "scavenging" else "scavenging_complete"
+                    if self.checkpoints.get(key, False):
+                        print(f"  - Resetting stale stage '{stage}' to incomplete.")
+                        self.checkpoints[key] = False
             self.save_checkpoints()
         except Exception as e:
             print(f"⚠️  Failed to run stale detector: {str(e)}")
@@ -579,24 +582,37 @@ We are specifying the URLs and time ranges for the clips to be trimmed by the Ar
 
     def run_narration_gate(self):
         """Quality gate for generated audio: exists, complete, on-target, not silent."""
-        validator = os.path.join(
-            os.path.dirname(__file__), "tools", "validators", "audio_validator.py"
-        )
-        if not os.path.exists(validator):
-            print("  [WARN] audio_validator.py not found. Skipping the narration gate.")
-            return True
         print("[GATE]  Running narration quality gate...")
         try:
-            result = subprocess.run(
-                [sys.executable, validator, self.project_path],
-                capture_output=True, encoding="utf-8", errors="replace",
-            )
+            result = validate_narration(self.project_path)
+
+            print("[SCAN] Narration validation")
+            print("-" * 56)
+            for item in result.get("checks", []):
+                icon = "[OK]  " if item["ok"] else "[FAIL]"
+                detail = "ok" if item["ok"] else (item["detail"] or "failed")
+                print(f"  {icon} {item['check']}: {detail}")
+
+            summary = result.get("summary", {})
+            if summary:
+                print("-" * 56)
+                print(f"  provider={summary.get('provider')} voice={summary.get('voice')} "
+                      f"mode={summary.get('mode')} words={summary.get('words')}")
+                print(f"  duration={summary.get('duration_seconds')}s "
+                      f"target={summary.get('target_seconds')}s "
+                      f"drift={summary.get('drift_pct')}%")
+
+            if result["passed"]:
+                print("-" * 56)
+                print("[SUCCESS] Narration track is valid and ready for the Director.")
+            else:
+                print("-" * 56)
+                print(f"[FAIL] {len(result.get('errors', []))} error(s) found.")
+
+            return result["passed"]
         except Exception as e:
             print(f"  [WARN] Narration gate could not run: {e}")
             return True
-        for line in (result.stdout or "").splitlines():
-            print(f"  {line}")
-        return result.returncode == 0
 
     def run_direction(self):
         if self.checkpoints["direction_complete"] and not self.force:
