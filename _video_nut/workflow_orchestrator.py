@@ -871,7 +871,7 @@ def main():
         print(f"Rework iterations: {orchestrator.checkpoints.get('rework_iterations', 0)}")
         print()
         
-        status_icons = {True: "[OK]", False: "[WAIT]"}
+        status_icons = {True: "✅", False: "⏳"}
         steps = [
             ("Investigation", "investigation_complete", "truth_dossier.md"),
             ("Scriptwriting", "scriptwriting_complete", "narrative_script.md"),
@@ -883,11 +883,13 @@ def main():
             ("Voiceover (final)", "voiceover_final_complete", "assets/audio/narration/narration_full.mp3"),
         ]
         
+        max_step_len = max(len(step[0]) for step in steps)
         for step_name, checkpoint_key, output_file in steps:
             is_complete = orchestrator.checkpoints.get(checkpoint_key, False)
             icon = status_icons[is_complete]
-            status = "Complete" if is_complete else "Pending"
-            print(f"  {icon} {step_name}: {status} → {output_file}")
+            status = "Complete" if is_complete else "Pending "
+            file_icon = "📁" if output_file.endswith("/") else "📄"
+            print(f"  {icon} {step_name.ljust(max_step_len)} │ {status} │ {file_icon} {output_file}")
         
         print()
         sys.exit(0)
