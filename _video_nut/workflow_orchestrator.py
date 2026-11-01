@@ -13,6 +13,9 @@ from datetime import datetime
 import shutil
 import concurrent.futures
 
+# Add script directory to sys.path so direct imports of tools.* work
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 # Enforce UTF-8 output encoding for Windows terminal safety
 if hasattr(sys.stdout, 'reconfigure'):
     sys.stdout.reconfigure(encoding='utf-8')
@@ -411,51 +414,59 @@ We are specifying the URLs and time ranges for the clips to be trimmed by the Ar
 
     def run_validation_gate(self, val_type, file_path):
         """Runs the output_validator.py script as a gate check."""
-        validator_script = os.path.join(os.path.dirname(__file__), "tools", "validators", "output_validator.py")
-        if not os.path.exists(validator_script):
-            print(f"⚠️  Validator script '{validator_script}' not found. Skipping gate.")
-            return True
-            
         print(f"[GATE]  Running validation gate for '{val_type}' on '{os.path.basename(file_path)}'...")
         try:
-            result = subprocess.run(
-                [sys.executable, validator_script, val_type, file_path],
-                capture_output=True,
-                encoding='utf-8'
-            )
-            if result.returncode == 0:
-                print(f"  {result.stdout.strip()}")
+            from tools.validators import output_validator
+
+            # Map val_type to the corresponding validator function
+            dispatch = {
+                "dossier": output_validator.validate_dossier,
+                "script": output_validator.validate_script,
+                "voice": output_validator.validate_voice_script,
+                "manifest": output_validator.validate_manifest,
+                "master": output_validator.validate_master_script,
+                "narration": output_validator.validate_narration,
+                "project": output_validator.validate_project,
+            }
+
+            if val_type not in dispatch:
+                print(f"[FAIL] Gate FAILED: Unknown validation type: {val_type}")
+                return False
+
+            success, msg = dispatch[val_type](file_path)
+            if success:
+                print(f"  [OK] Validation PASSED: {msg}")
                 return True
             else:
-                print(f"[FAIL] Gate FAILED: {result.stdout.strip()}")
-                print(f"  Error Details: {result.stderr.strip()}")
+                print(f"[FAIL] Gate FAILED: [FAIL] Validation FAILED: {msg}")
                 return False
+        except ImportError as e:
+            if getattr(e, "name", None) in ("tools.validators", "tools.validators.output_validator"):
+                print(f"⚠️  Validator script not found. Skipping gate.")
+                return True
+            raise
         except Exception as e:
             print(f"[FAIL] Error running validator gate: {str(e)}")
             return False
 
     def run_stale_detection(self):
         """Runs the stale_detector.py script to flag outdated files."""
-        detector_script = os.path.join(os.path.dirname(__file__), "tools", "validators", "stale_detector.py")
-        if not os.path.exists(detector_script):
-            return
+        try:
+            from tools.validators import stale_detector
+        except ImportError as e:
+            if getattr(e, "name", None) in ("tools.validators", "tools.validators.stale_detector"):
+                return
+            raise
             
         print("[SCAN] Scanning for stale pipeline stages...")
         try:
-            result = subprocess.run(
-                [sys.executable, detector_script, self.project_path],
-                capture_output=True,
-                encoding='utf-8'
-            )
-            for line in result.stdout.splitlines():
-                if line.startswith("STALE_JSON:"):
-                    stale_data = json.loads(line.replace("STALE_JSON:", "").strip())
-                    for stage, is_stale in stale_data.items():
-                        if is_stale:
-                            key = f"{stage}_complete" if stage != "scavenging" else "scavenging_complete"
-                            if self.checkpoints.get(key, False):
-                                print(f"  - Resetting stale stage '{stage}' to incomplete.")
-                                self.checkpoints[key] = False
+            stale_data = stale_detector.detect_stale_stages(self.project_path)
+            for stage, is_stale in stale_data.items():
+                if is_stale:
+                    key = f"{stage}_complete" if stage != "scavenging" else "scavenging_complete"
+                    if self.checkpoints.get(key, False):
+                        print(f"  - Resetting stale stage '{stage}' to incomplete.")
+                        self.checkpoints[key] = False
             self.save_checkpoints()
         except Exception as e:
             print(f"⚠️  Failed to run stale detector: {str(e)}")
@@ -579,24 +590,44 @@ We are specifying the URLs and time ranges for the clips to be trimmed by the Ar
 
     def run_narration_gate(self):
         """Quality gate for generated audio: exists, complete, on-target, not silent."""
-        validator = os.path.join(
-            os.path.dirname(__file__), "tools", "validators", "audio_validator.py"
-        )
-        if not os.path.exists(validator):
-            print("  [WARN] audio_validator.py not found. Skipping the narration gate.")
-            return True
+        try:
+            from tools.validators import audio_validator
+        except ImportError as e:
+            if getattr(e, "name", None) in ("tools.validators", "tools.validators.audio_validator"):
+                print("  [WARN] audio_validator.py not found. Skipping the narration gate.")
+                return True
+            raise
+
         print("[GATE]  Running narration quality gate...")
         try:
-            result = subprocess.run(
-                [sys.executable, validator, self.project_path],
-                capture_output=True, encoding="utf-8", errors="replace",
-            )
+            result = audio_validator.validate_narration(self.project_path)
+
+            # Print output mirroring the CLI validator's format
+            for item in result.get("checks", []):
+                icon = "[OK]  " if item["ok"] else "[FAIL]"
+                detail = "ok" if item["ok"] else (item.get("detail") or "failed")
+                print(f"  {icon} {item.get('check')}: {detail}")
+
+            summary = result.get("summary")
+            if summary:
+                print(f"  provider={summary.get('provider')} voice={summary.get('voice')} "
+                      f"mode={summary.get('mode')} words={summary.get('words')}")
+                print(f"  duration={summary.get('duration_seconds')}s "
+                      f"drift={summary.get('drift_pct', 'n/a')}% "
+                      f"mean_volume={summary.get('mean_volume_db', 'n/a')}dB")
+
+            for warning in result.get("warnings", []):
+                print(f"  [WARN] {warning}")
+
+            if result.get("passed"):
+                print("[OK] Narration validation PASSED")
+            else:
+                print("[FAIL] Narration validation FAILED")
+
+            return result.get("passed", False)
         except Exception as e:
             print(f"  [WARN] Narration gate could not run: {e}")
             return True
-        for line in (result.stdout or "").splitlines():
-            print(f"  {line}")
-        return result.returncode == 0
 
     def run_direction(self):
         if self.checkpoints["direction_complete"] and not self.force:
@@ -698,47 +729,37 @@ We are specifying the URLs and time ranges for the clips to be trimmed by the Ar
             print("[FAIL] EIC agent execution failed.")
             return False
             
-        # Call auto_rework.py to check for rejections
-        rework_script = os.path.join(os.path.dirname(__file__), "tools", "auto_rework.py")
-        if not os.path.exists(rework_script):
-            print("⚠️  auto_rework.py script not found. Skipping auto-rework check.")
-            return True
+        # Call auto_rework to check for rejections
+        try:
+            from tools import auto_rework
+        except ImportError as e:
+            if getattr(e, "name", None) in ("tools", "tools.auto_rework"):
+                print("⚠️  auto_rework.py script not found. Skipping auto-rework check.")
+                return True
+            raise
             
         print("[SCAN] Checking EIC audit verdict...")
         try:
-            result = subprocess.run(
-                [sys.executable, rework_script, self.project_path],
-                capture_output=True,
-                encoding='utf-8'
-            )
-            
-            rerun_stage = None
-            review_status = None
-            for line in (result.stdout or "").splitlines():
-                if line.startswith("RERUN_STAGE:"):
-                    rerun_stage = line.replace("RERUN_STAGE:", "").strip()
-                elif line.startswith("REVIEW_STATUS:"):
-                    review_status = line.replace("REVIEW_STATUS:", "").strip().upper()
-
-            # FAIL CLOSED. Approval must be stated, never inferred from silence.
-            # Before v1.5.1 the only test was `if rerun_stage:` with an else-branch
-            # that printed "EIC APPROVED" - so a missing review_result.json, malformed
-            # JSON, an unrecognised verdict, or an agent name the rework engine did
-            # not know all resulted in an unreviewed video being declared finished
-            # (and, since v1.5, a paid narration render on top of it).
-            if review_status is None or review_status == "UNDETERMINED":
+            try:
+                fail_stage, msg = auto_rework.parse_review_result(self.project_path)
+            except auto_rework.UndeterminedVerdict as e:
                 print("\n[FAIL] The EIC verdict could not be resolved. NOT treating this as approval.")
-                for line in (result.stdout or "").splitlines():
-                    if line.strip():
-                        print(f"  {line}")
-                if result.stderr:
-                    print(f"  STDERR: {result.stderr.strip()[:500]}")
+                print(f"  {e}")
                 print("\n  Fix the verdict and re-run with --resume. Checkpoints are untouched.")
                 print(f"  Verdict file: {os.path.join(self.project_path, 'review_result.json')}")
                 return False
 
-            if rerun_stage:
-                # Reload checkpoints from disk to preserve the resets made by auto_rework.py
+            if fail_stage:
+                print(f"[ALERT] Rework required: {msg}")
+                success, reset_msg = auto_rework.apply_rework_checkpoints(self.project_path, fail_stage)
+
+                if not success:
+                    print(f"\n[FAIL] Rework initialization failed: {reset_msg}")
+                    return False
+
+                print(f"[OK] Rework initialized successfully: {reset_msg}")
+
+                # Reload checkpoints from disk to preserve the resets made by auto_rework
                 self.checkpoints = self.load_checkpoints()
                 
                 iterations = self.checkpoints.get("rework_iterations", 0)
@@ -751,14 +772,11 @@ We are specifying the URLs and time ranges for the clips to be trimmed by the Ar
                 self.checkpoints["rework_iterations"] = iterations + 1
                 self.save_checkpoints()
                 
-                print(f"\n[REWORK] EIC Rejected the audit. Triggering Rework Loop #{iterations + 1} starting from stage '{rerun_stage}'...")
+                print(f"\n[REWORK] EIC Rejected the audit. Triggering Rework Loop #{iterations + 1} starting from stage '{fail_stage}'...")
                 # Loop back: re-run the pipeline from the rerun_stage
                 return "loop_back"
-            elif review_status == "REWORK":
-                # auto_rework said rework but could not emit a stage - do not proceed.
-                print("\n[FAIL] EIC requested rework but no stage was resolved.")
-                return False
             else:
+                print(f"[OK] Rework not required: {msg}")
                 print("\n[SUCCESS] EIC APPROVED! No rework required.")
                 self.checkpoints["rework_iterations"] = 0
                 self.save_checkpoints()
