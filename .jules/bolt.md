@@ -1,0 +1,3 @@
+## 2024-05-08 - Replace subprocess calls with direct module imports in workflow_orchestrator
+**Learning:** In python scripts like `workflow_orchestrator.py`, launching internal python scripts as a subprocess introduces significant Python interpreter startup overhead. Replacing these with direct module imports and function calls avoids launching an interpreter repeatedly, substantially boosting performance.
+**Action:** Instead of `subprocess.run([sys.executable, 'script.py'])`, use `import script` and directly call its functions whenever the script is an internal module. Measured an overall CLI time reduction from ~1.74s to ~0.82s.
