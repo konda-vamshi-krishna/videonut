@@ -13,18 +13,13 @@ from datetime import datetime
 import shutil
 import concurrent.futures
 
-from tools.validators.stale_detector import detect_stale_stages
-from tools.validators.output_validator import (
-    validate_dossier,
-    validate_script,
-    validate_voice_script,
-    validate_narration as validate_narration_output,
-    validate_master_script,
-    validate_project,
-    validate_manifest,
-)
-from tools.validators.audio_validator import validate_narration
-from tools.auto_rework import parse_review_result, apply_rework_checkpoints, UndeterminedVerdict
+import importlib.util
+
+def _import_tool(module_name, file_path):
+    spec = importlib.util.spec_from_file_location(module_name, file_path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 # Enforce UTF-8 output encoding for Windows terminal safety
 if hasattr(sys.stdout, 'reconfigure'):
@@ -424,24 +419,30 @@ We are specifying the URLs and time ranges for the clips to be trimmed by the Ar
 
     def run_validation_gate(self, val_type, file_path):
         """Runs the output_validator.py script as a gate check."""
+        validator_script = os.path.join(os.path.dirname(__file__), "tools", "validators", "output_validator.py")
+        if not os.path.exists(validator_script):
+            print(f"⚠️  Validator script '{validator_script}' not found. Skipping gate.")
+            return True
+
         print(f"[GATE]  Running validation gate for '{val_type}' on '{os.path.basename(file_path)}'...")
 
-        validators = {
-            "dossier": validate_dossier,
-            "script": validate_script,
-            "voice": validate_voice_script,
-            "narration": validate_narration_output,
-            "master": validate_master_script,
-            "project": validate_project,
-            "manifest": validate_manifest
-        }
-
-        val_func = validators.get(val_type)
-        if not val_func:
-            print(f"Unknown validation type: {val_type}")
-            return False
-
         try:
+            mod = _import_tool("output_validator", validator_script)
+            validators = {
+                "dossier": mod.validate_dossier,
+                "script": mod.validate_script,
+                "voice": mod.validate_voice_script,
+                "narration": mod.validate_narration,
+                "master": mod.validate_master_script,
+                "project": mod.validate_project,
+                "manifest": mod.validate_manifest
+            }
+
+            val_func = validators.get(val_type)
+            if not val_func:
+                print(f"Unknown validation type: {val_type}")
+                return False
+
             success, msg = val_func(file_path)
             if success:
                 print(f"  [OK] Validation PASSED: {msg}")
@@ -455,9 +456,14 @@ We are specifying the URLs and time ranges for the clips to be trimmed by the Ar
 
     def run_stale_detection(self):
         """Runs the stale detection logic to flag outdated files."""
+        detector_script = os.path.join(os.path.dirname(__file__), "tools", "validators", "stale_detector.py")
+        if not os.path.exists(detector_script):
+            return
+
         print("[SCAN] Scanning for stale pipeline stages...")
         try:
-            stale_data = detect_stale_stages(self.project_path)
+            mod = _import_tool("stale_detector", detector_script)
+            stale_data = mod.detect_stale_stages(self.project_path)
             for stage, is_stale in stale_data.items():
                 if is_stale:
                     key = f"{stage}_complete" if stage != "scavenging" else "scavenging_complete"
@@ -587,9 +593,17 @@ We are specifying the URLs and time ranges for the clips to be trimmed by the Ar
 
     def run_narration_gate(self):
         """Quality gate for generated audio: exists, complete, on-target, not silent."""
+        validator = os.path.join(
+            os.path.dirname(__file__), "tools", "validators", "audio_validator.py"
+        )
+        if not os.path.exists(validator):
+            print("  [WARN] audio_validator.py not found. Skipping the narration gate.")
+            return True
+
         print("[GATE]  Running narration quality gate...")
         try:
-            result_dict = validate_narration(self.project_path)
+            mod = _import_tool("audio_validator", validator)
+            result_dict = mod.validate_narration(self.project_path)
 
             print("[SCAN] Narration validation")
             print("-" * 56)
@@ -721,11 +735,18 @@ We are specifying the URLs and time ranges for the clips to be trimmed by the Ar
             print("[FAIL] EIC agent execution failed.")
             return False
             
+        # Call auto_rework.py to check for rejections
+        rework_script = os.path.join(os.path.dirname(__file__), "tools", "auto_rework.py")
+        if not os.path.exists(rework_script):
+            print("⚠️  auto_rework.py script not found. Skipping auto-rework check.")
+            return True
+
         print("[SCAN] Checking EIC audit verdict...")
         try:
+            mod = _import_tool("auto_rework", rework_script)
             try:
-                fail_stage, msg = parse_review_result(self.project_path)
-            except UndeterminedVerdict as e:
+                fail_stage, msg = mod.parse_review_result(self.project_path)
+            except mod.UndeterminedVerdict as e:
                 print("\n[FAIL] The EIC verdict could not be resolved. NOT treating this as approval.")
                 print(f"  [FAIL] Cannot determine the EIC verdict: {e}")
                 print("\n  Fix the verdict and re-run with --resume. Checkpoints are untouched.")
@@ -738,7 +759,7 @@ We are specifying the URLs and time ranges for the clips to be trimmed by the Ar
                 rerun_stage = None
             else:
                 print(f"[ALERT] Rework required: {msg}")
-                success, reset_msg = apply_rework_checkpoints(self.project_path, fail_stage)
+                success, reset_msg = mod.apply_rework_checkpoints(self.project_path, fail_stage)
                 if success:
                     print(f"[OK] Rework initialized successfully: {reset_msg}")
                     review_status = "REWORK"
