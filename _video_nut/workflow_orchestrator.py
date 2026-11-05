@@ -410,52 +410,52 @@ We are specifying the URLs and time ranges for the clips to be trimmed by the Ar
         return True
 
     def run_validation_gate(self, val_type, file_path):
-        """Runs the output_validator.py script as a gate check."""
-        validator_script = os.path.join(os.path.dirname(__file__), "tools", "validators", "output_validator.py")
-        if not os.path.exists(validator_script):
-            print(f"⚠️  Validator script '{validator_script}' not found. Skipping gate.")
-            return True
-            
+        """Runs the output_validator as a gate check."""
         print(f"[GATE]  Running validation gate for '{val_type}' on '{os.path.basename(file_path)}'...")
         try:
-            result = subprocess.run(
-                [sys.executable, validator_script, val_type, file_path],
-                capture_output=True,
-                encoding='utf-8'
-            )
-            if result.returncode == 0:
-                print(f"  {result.stdout.strip()}")
+            import tools.validators.output_validator as output_validator
+            val_type_lower = val_type.lower()
+            if val_type_lower == "dossier":
+                success, msg = output_validator.validate_dossier(file_path)
+            elif val_type_lower == "script":
+                success, msg = output_validator.validate_script(file_path)
+            elif val_type_lower == "voice":
+                success, msg = output_validator.validate_voice_script(file_path)
+            elif val_type_lower == "narration":
+                success, msg = output_validator.validate_narration(file_path)
+            elif val_type_lower == "master":
+                success, msg = output_validator.validate_master_script(file_path)
+            elif val_type_lower == "project":
+                success, msg = output_validator.validate_project(file_path)
+            elif val_type_lower == "manifest":
+                success, msg = output_validator.validate_manifest(file_path)
+            else:
+                print(f"[FAIL] Unknown validation type: {val_type}")
+                return False
+
+            if success:
+                print(f"  [OK] Validation PASSED: {msg}")
                 return True
             else:
-                print(f"[FAIL] Gate FAILED: {result.stdout.strip()}")
-                print(f"  Error Details: {result.stderr.strip()}")
+                print(f"[FAIL] Gate FAILED: [FAIL] Validation FAILED: {msg}")
+                print(f"  Error Details: ")
                 return False
         except Exception as e:
             print(f"[FAIL] Error running validator gate: {str(e)}")
             return False
 
     def run_stale_detection(self):
-        """Runs the stale_detector.py script to flag outdated files."""
-        detector_script = os.path.join(os.path.dirname(__file__), "tools", "validators", "stale_detector.py")
-        if not os.path.exists(detector_script):
-            return
-            
+        """Runs the stale_detector to flag outdated files."""
         print("[SCAN] Scanning for stale pipeline stages...")
         try:
-            result = subprocess.run(
-                [sys.executable, detector_script, self.project_path],
-                capture_output=True,
-                encoding='utf-8'
-            )
-            for line in result.stdout.splitlines():
-                if line.startswith("STALE_JSON:"):
-                    stale_data = json.loads(line.replace("STALE_JSON:", "").strip())
-                    for stage, is_stale in stale_data.items():
-                        if is_stale:
-                            key = f"{stage}_complete" if stage != "scavenging" else "scavenging_complete"
-                            if self.checkpoints.get(key, False):
-                                print(f"  - Resetting stale stage '{stage}' to incomplete.")
-                                self.checkpoints[key] = False
+            import tools.validators.stale_detector as stale_detector
+            stale_data = stale_detector.detect_stale_stages(self.project_path)
+            for stage, is_stale in stale_data.items():
+                if is_stale:
+                    key = f"{stage}_complete" if stage != "scavenging" else "scavenging_complete"
+                    if self.checkpoints.get(key, False):
+                        print(f"  - Resetting stale stage '{stage}' to incomplete.")
+                        self.checkpoints[key] = False
             self.save_checkpoints()
         except Exception as e:
             print(f"⚠️  Failed to run stale detector: {str(e)}")
@@ -579,24 +579,29 @@ We are specifying the URLs and time ranges for the clips to be trimmed by the Ar
 
     def run_narration_gate(self):
         """Quality gate for generated audio: exists, complete, on-target, not silent."""
-        validator = os.path.join(
-            os.path.dirname(__file__), "tools", "validators", "audio_validator.py"
-        )
-        if not os.path.exists(validator):
-            print("  [WARN] audio_validator.py not found. Skipping the narration gate.")
-            return True
         print("[GATE]  Running narration quality gate...")
         try:
-            result = subprocess.run(
-                [sys.executable, validator, self.project_path],
-                capture_output=True, encoding="utf-8", errors="replace",
-            )
+            import tools.validators.audio_validator as audio_validator
+            result = audio_validator.validate_narration(self.project_path)
+
+            for item in result["checks"]:
+                icon = "[OK]  " if item["ok"] else "[FAIL]"
+                detail = "ok" if item["ok"] else (item["detail"] or "failed")
+                print(f"  {icon} {item['check']}: {detail}")
+            summary = result["summary"]
+            if summary:
+                print(f"  provider={summary.get('provider')} voice={summary.get('voice')} "
+                      f"mode={summary.get('mode')} words={summary.get('words')}")
+                print(f"  duration={summary.get('duration_seconds')}s "
+                      f"drift={summary.get('drift_pct', 'n/a')}% "
+                      f"mean_volume={summary.get('mean_volume_db', 'n/a')}dB")
+            for warning in result["warnings"]:
+                print(f"  [WARN] {warning}")
+
+            return result["passed"]
         except Exception as e:
             print(f"  [WARN] Narration gate could not run: {e}")
             return True
-        for line in (result.stdout or "").splitlines():
-            print(f"  {line}")
-        return result.returncode == 0
 
     def run_direction(self):
         if self.checkpoints["direction_complete"] and not self.force:
@@ -698,71 +703,49 @@ We are specifying the URLs and time ranges for the clips to be trimmed by the Ar
             print("[FAIL] EIC agent execution failed.")
             return False
             
-        # Call auto_rework.py to check for rejections
-        rework_script = os.path.join(os.path.dirname(__file__), "tools", "auto_rework.py")
-        if not os.path.exists(rework_script):
-            print("⚠️  auto_rework.py script not found. Skipping auto-rework check.")
-            return True
-            
         print("[SCAN] Checking EIC audit verdict...")
         try:
-            result = subprocess.run(
-                [sys.executable, rework_script, self.project_path],
-                capture_output=True,
-                encoding='utf-8'
-            )
+            import tools.auto_rework as auto_rework
             
-            rerun_stage = None
-            review_status = None
-            for line in (result.stdout or "").splitlines():
-                if line.startswith("RERUN_STAGE:"):
-                    rerun_stage = line.replace("RERUN_STAGE:", "").strip()
-                elif line.startswith("REVIEW_STATUS:"):
-                    review_status = line.replace("REVIEW_STATUS:", "").strip().upper()
-
-            # FAIL CLOSED. Approval must be stated, never inferred from silence.
-            # Before v1.5.1 the only test was `if rerun_stage:` with an else-branch
-            # that printed "EIC APPROVED" - so a missing review_result.json, malformed
-            # JSON, an unrecognised verdict, or an agent name the rework engine did
-            # not know all resulted in an unreviewed video being declared finished
-            # (and, since v1.5, a paid narration render on top of it).
-            if review_status is None or review_status == "UNDETERMINED":
-                print("\n[FAIL] The EIC verdict could not be resolved. NOT treating this as approval.")
-                for line in (result.stdout or "").splitlines():
-                    if line.strip():
-                        print(f"  {line}")
-                if result.stderr:
-                    print(f"  STDERR: {result.stderr.strip()[:500]}")
+            try:
+                fail_stage, msg = auto_rework.parse_review_result(self.project_path)
+            except auto_rework.UndeterminedVerdict as e:
+                print(f"\n[FAIL] The EIC verdict could not be resolved. NOT treating this as approval.")
+                print(f"  Cannot determine the EIC verdict: {e}")
                 print("\n  Fix the verdict and re-run with --resume. Checkpoints are untouched.")
                 print(f"  Verdict file: {os.path.join(self.project_path, 'review_result.json')}")
                 return False
-
-            if rerun_stage:
-                # Reload checkpoints from disk to preserve the resets made by auto_rework.py
-                self.checkpoints = self.load_checkpoints()
                 
-                iterations = self.checkpoints.get("rework_iterations", 0)
-                if iterations >= self.rework_limit:
-                    print(f"\n[ALERT] REWORK LIMIT REACHED ({self.rework_limit} loops).")
-                    print("Stopping pipeline and hand control to the user.")
-                    print(f"Please review {os.path.join(self.project_path, 'review_report.md')} and correction_log.md.")
-                    return False
-                    
-                self.checkpoints["rework_iterations"] = iterations + 1
-                self.save_checkpoints()
-                
-                print(f"\n[REWORK] EIC Rejected the audit. Triggering Rework Loop #{iterations + 1} starting from stage '{rerun_stage}'...")
-                # Loop back: re-run the pipeline from the rerun_stage
-                return "loop_back"
-            elif review_status == "REWORK":
-                # auto_rework said rework but could not emit a stage - do not proceed.
-                print("\n[FAIL] EIC requested rework but no stage was resolved.")
-                return False
-            else:
-                print("\n[SUCCESS] EIC APPROVED! No rework required.")
+            if not fail_stage:
+                print(f"\n[SUCCESS] EIC APPROVED! No rework required. {msg}")
                 self.checkpoints["rework_iterations"] = 0
                 self.save_checkpoints()
                 return True
+
+            print(f"\n[ALERT] Rework required: {msg}")
+            reset_success, reset_msg = auto_rework.apply_rework_checkpoints(self.project_path, fail_stage)
+
+            if not reset_success:
+                print(f"\n[FAIL] Rework initialization failed: {reset_msg}")
+                return False
+
+            # Reload checkpoints from disk to preserve the resets made by auto_rework.py
+            self.checkpoints = self.load_checkpoints()
+
+            iterations = self.checkpoints.get("rework_iterations", 0)
+            if iterations >= self.rework_limit:
+                print(f"\n[ALERT] REWORK LIMIT REACHED ({self.rework_limit} loops).")
+                print("Stopping pipeline and hand control to the user.")
+                print(f"Please review {os.path.join(self.project_path, 'review_report.md')} and correction_log.md.")
+                return False
+
+            self.checkpoints["rework_iterations"] = iterations + 1
+            self.save_checkpoints()
+
+            print(f"\n[REWORK] EIC Rejected the audit. Triggering Rework Loop #{iterations + 1} starting from stage '{fail_stage}'...")
+            # Loop back: re-run the pipeline from the rerun_stage
+            return "loop_back"
+
         except Exception as e:
             print(f"[FAIL] Error during auto-rework checking: {str(e)}")
             return False
