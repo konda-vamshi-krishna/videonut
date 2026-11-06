@@ -871,7 +871,7 @@ def main():
         print(f"Rework iterations: {orchestrator.checkpoints.get('rework_iterations', 0)}")
         print()
         
-        status_icons = {True: "[OK]", False: "[WAIT]"}
+        status_icons = {True: "✅", False: "⏳"}
         steps = [
             ("Investigation", "investigation_complete", "truth_dossier.md"),
             ("Scriptwriting", "scriptwriting_complete", "narrative_script.md"),
