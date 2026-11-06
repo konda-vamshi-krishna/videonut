@@ -13,6 +13,9 @@ from datetime import datetime
 import shutil
 import concurrent.futures
 
+from tools.validators import output_validator
+from tools.validators import stale_detector
+
 # Enforce UTF-8 output encoding for Windows terminal safety
 if hasattr(sys.stdout, 'reconfigure'):
     sys.stdout.reconfigure(encoding='utf-8')
@@ -410,52 +413,49 @@ We are specifying the URLs and time ranges for the clips to be trimmed by the Ar
         return True
 
     def run_validation_gate(self, val_type, file_path):
-        """Runs the output_validator.py script as a gate check."""
-        validator_script = os.path.join(os.path.dirname(__file__), "tools", "validators", "output_validator.py")
-        if not os.path.exists(validator_script):
-            print(f"⚠️  Validator script '{validator_script}' not found. Skipping gate.")
-            return True
-            
+        """Runs the output_validator.py script as a gate check via direct import."""
         print(f"[GATE]  Running validation gate for '{val_type}' on '{os.path.basename(file_path)}'...")
         try:
-            result = subprocess.run(
-                [sys.executable, validator_script, val_type, file_path],
-                capture_output=True,
-                encoding='utf-8'
-            )
-            if result.returncode == 0:
-                print(f"  {result.stdout.strip()}")
+            if val_type == "dossier":
+                success, msg = output_validator.validate_dossier(file_path)
+            elif val_type == "script":
+                success, msg = output_validator.validate_script(file_path)
+            elif val_type == "voice":
+                success, msg = output_validator.validate_voice_script(file_path)
+            elif val_type == "narration":
+                success, msg = output_validator.validate_narration(file_path)
+            elif val_type == "master":
+                success, msg = output_validator.validate_master_script(file_path)
+            elif val_type == "project":
+                success, msg = output_validator.validate_project(file_path)
+            elif val_type == "manifest":
+                success, msg = output_validator.validate_manifest(file_path)
+            else:
+                print(f"[FAIL] Gate FAILED: Unknown validation type: {val_type}")
+                return False
+
+            if success:
+                print(f"  [OK] Validation PASSED: {msg}")
                 return True
             else:
-                print(f"[FAIL] Gate FAILED: {result.stdout.strip()}")
-                print(f"  Error Details: {result.stderr.strip()}")
+                print(f"[FAIL] Gate FAILED: Validation failed")
+                print(f"  Error Details: {msg}")
                 return False
         except Exception as e:
             print(f"[FAIL] Error running validator gate: {str(e)}")
             return False
 
     def run_stale_detection(self):
-        """Runs the stale_detector.py script to flag outdated files."""
-        detector_script = os.path.join(os.path.dirname(__file__), "tools", "validators", "stale_detector.py")
-        if not os.path.exists(detector_script):
-            return
-            
+        """Runs the stale_detector.py script to flag outdated files via direct import."""
         print("[SCAN] Scanning for stale pipeline stages...")
         try:
-            result = subprocess.run(
-                [sys.executable, detector_script, self.project_path],
-                capture_output=True,
-                encoding='utf-8'
-            )
-            for line in result.stdout.splitlines():
-                if line.startswith("STALE_JSON:"):
-                    stale_data = json.loads(line.replace("STALE_JSON:", "").strip())
-                    for stage, is_stale in stale_data.items():
-                        if is_stale:
-                            key = f"{stage}_complete" if stage != "scavenging" else "scavenging_complete"
-                            if self.checkpoints.get(key, False):
-                                print(f"  - Resetting stale stage '{stage}' to incomplete.")
-                                self.checkpoints[key] = False
+            stale_data = stale_detector.detect_stale_stages(self.project_path)
+            for stage, is_stale in stale_data.items():
+                if is_stale:
+                    key = f"{stage}_complete" if stage != "scavenging" else "scavenging_complete"
+                    if self.checkpoints.get(key, False):
+                        print(f"  - Resetting stale stage '{stage}' to incomplete.")
+                        self.checkpoints[key] = False
             self.save_checkpoints()
         except Exception as e:
             print(f"⚠️  Failed to run stale detector: {str(e)}")

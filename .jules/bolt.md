@@ -1,0 +1,3 @@
+## 2024-05-18 - Internal CLI Tools Overhead
+**Learning:** `workflow_orchestrator.py` was invoking its own internal Python validator scripts (`output_validator.py`, `stale_detector.py`) via `subprocess.run([sys.executable, ...])`. Every gate trigger incurred the full Python interpreter startup latency (~20-30ms), significantly slowing down the orchestration loop, especially given how often these checks are invoked.
+**Action:** When a Python CLI tool is part of the internal workflow and has a well-defined Python API (like `validate_dossier` or `detect_stale_stages`), import it directly rather than spawning a new process. Only use subprocesses for external agents or tools that lack programmatic entry points.
