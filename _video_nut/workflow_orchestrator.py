@@ -435,28 +435,29 @@ We are specifying the URLs and time ranges for the clips to be trimmed by the Ar
             return False
 
     def run_stale_detection(self):
-        """Runs the stale_detector.py script to flag outdated files."""
-        detector_script = os.path.join(os.path.dirname(__file__), "tools", "validators", "stale_detector.py")
+        """Runs stale_detector directly to flag outdated files, saving Python interpreter startup time."""
+        # Ensure our _video_nut directory is in sys.path to import tools properly
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        if current_dir not in sys.path:
+            sys.path.insert(0, current_dir)
+
+        detector_script = os.path.join(current_dir, "tools", "validators", "stale_detector.py")
         if not os.path.exists(detector_script):
             return
             
         print("[SCAN] Scanning for stale pipeline stages...")
         try:
-            result = subprocess.run(
-                [sys.executable, detector_script, self.project_path],
-                capture_output=True,
-                encoding='utf-8'
-            )
-            for line in result.stdout.splitlines():
-                if line.startswith("STALE_JSON:"):
-                    stale_data = json.loads(line.replace("STALE_JSON:", "").strip())
-                    for stage, is_stale in stale_data.items():
-                        if is_stale:
-                            key = f"{stage}_complete" if stage != "scavenging" else "scavenging_complete"
-                            if self.checkpoints.get(key, False):
-                                print(f"  - Resetting stale stage '{stage}' to incomplete.")
-                                self.checkpoints[key] = False
+            from tools.validators.stale_detector import detect_stale_stages
+            stale_data = detect_stale_stages(self.project_path)
+            for stage, is_stale in stale_data.items():
+                if is_stale:
+                    key = f"{stage}_complete" if stage != "scavenging" else "scavenging_complete"
+                    if self.checkpoints.get(key, False):
+                        print(f"  - Resetting stale stage '{stage}' to incomplete.")
+                        self.checkpoints[key] = False
             self.save_checkpoints()
+        except ImportError:
+            print("⚠️  Failed to import stale detector.")
         except Exception as e:
             print(f"⚠️  Failed to run stale detector: {str(e)}")
 
@@ -698,46 +699,41 @@ We are specifying the URLs and time ranges for the clips to be trimmed by the Ar
             print("[FAIL] EIC agent execution failed.")
             return False
             
-        # Call auto_rework.py to check for rejections
-        rework_script = os.path.join(os.path.dirname(__file__), "tools", "auto_rework.py")
+        # Ensure our _video_nut directory is in sys.path to import tools properly
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        if current_dir not in sys.path:
+            sys.path.insert(0, current_dir)
+
+        rework_script = os.path.join(current_dir, "tools", "auto_rework.py")
         if not os.path.exists(rework_script):
             print("⚠️  auto_rework.py script not found. Skipping auto-rework check.")
             return True
             
         print("[SCAN] Checking EIC audit verdict...")
         try:
-            result = subprocess.run(
-                [sys.executable, rework_script, self.project_path],
-                capture_output=True,
-                encoding='utf-8'
-            )
-            
-            rerun_stage = None
-            review_status = None
-            for line in (result.stdout or "").splitlines():
-                if line.startswith("RERUN_STAGE:"):
-                    rerun_stage = line.replace("RERUN_STAGE:", "").strip()
-                elif line.startswith("REVIEW_STATUS:"):
-                    review_status = line.replace("REVIEW_STATUS:", "").strip().upper()
-
-            # FAIL CLOSED. Approval must be stated, never inferred from silence.
-            # Before v1.5.1 the only test was `if rerun_stage:` with an else-branch
-            # that printed "EIC APPROVED" - so a missing review_result.json, malformed
-            # JSON, an unrecognised verdict, or an agent name the rework engine did
-            # not know all resulted in an unreviewed video being declared finished
-            # (and, since v1.5, a paid narration render on top of it).
-            if review_status is None or review_status == "UNDETERMINED":
+            from tools.auto_rework import parse_review_result, apply_rework_checkpoints, UndeterminedVerdict
+            try:
+                fail_stage, msg = parse_review_result(self.project_path)
+            except UndeterminedVerdict as e:
+                print(f"\n[FAIL] Cannot determine the EIC verdict: {e}")
                 print("\n[FAIL] The EIC verdict could not be resolved. NOT treating this as approval.")
-                for line in (result.stdout or "").splitlines():
-                    if line.strip():
-                        print(f"  {line}")
-                if result.stderr:
-                    print(f"  STDERR: {result.stderr.strip()[:500]}")
                 print("\n  Fix the verdict and re-run with --resume. Checkpoints are untouched.")
                 print(f"  Verdict file: {os.path.join(self.project_path, 'review_result.json')}")
                 return False
 
-            if rerun_stage:
+            if not fail_stage:
+                print(f"[OK] Rework not required: {msg}")
+                print("\n[SUCCESS] EIC APPROVED! No rework required.")
+                self.checkpoints["rework_iterations"] = 0
+                self.save_checkpoints()
+                return True
+
+            print(f"[ALERT] Rework required: {msg}")
+            reset_success, reset_msg = apply_rework_checkpoints(self.project_path, fail_stage)
+
+            if reset_success:
+                print(f"[OK] Rework initialized successfully: {reset_msg}")
+
                 # Reload checkpoints from disk to preserve the resets made by auto_rework.py
                 self.checkpoints = self.load_checkpoints()
                 
@@ -751,18 +747,13 @@ We are specifying the URLs and time ranges for the clips to be trimmed by the Ar
                 self.checkpoints["rework_iterations"] = iterations + 1
                 self.save_checkpoints()
                 
-                print(f"\n[REWORK] EIC Rejected the audit. Triggering Rework Loop #{iterations + 1} starting from stage '{rerun_stage}'...")
-                # Loop back: re-run the pipeline from the rerun_stage
+                print(f"\n[REWORK] EIC Rejected the audit. Triggering Rework Loop #{iterations + 1} starting from stage '{fail_stage}'...")
+                # Loop back: re-run the pipeline from the fail_stage
                 return "loop_back"
-            elif review_status == "REWORK":
-                # auto_rework said rework but could not emit a stage - do not proceed.
-                print("\n[FAIL] EIC requested rework but no stage was resolved.")
-                return False
             else:
-                print("\n[SUCCESS] EIC APPROVED! No rework required.")
-                self.checkpoints["rework_iterations"] = 0
-                self.save_checkpoints()
-                return True
+                print(f"[FAIL] Rework initialization failed: {reset_msg}")
+                return False
+
         except Exception as e:
             print(f"[FAIL] Error during auto-rework checking: {str(e)}")
             return False
