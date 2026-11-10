@@ -31,9 +31,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # 3.9 is the realistic floor for users on older distros; 3.12 is what
+        # 3.10 is the realistic floor for users on modern distros since 26.04; 3.12 is what
         # most people have now. The suite is stdlib-only, so both must pass.
-        python: ["3.9", "3.12"]
+        python: ["3.10", "3.12"]
     steps:
       - uses: actions/checkout@v5
 
