@@ -13,6 +13,12 @@ from datetime import datetime
 import shutil
 import concurrent.futures
 
+# ⚡ Bolt: Add the current directory to sys.path to allow fast direct module imports
+# instead of relying on expensive subprocess interpreter startups.
+current_dir = os.path.dirname(os.path.abspath(__file__))
+if current_dir not in sys.path:
+    sys.path.insert(0, current_dir)
+
 # Enforce UTF-8 output encoding for Windows terminal safety
 if hasattr(sys.stdout, 'reconfigure'):
     sys.stdout.reconfigure(encoding='utf-8')
@@ -418,17 +424,31 @@ We are specifying the URLs and time ranges for the clips to be trimmed by the Ar
             
         print(f"[GATE]  Running validation gate for '{val_type}' on '{os.path.basename(file_path)}'...")
         try:
-            result = subprocess.run(
-                [sys.executable, validator_script, val_type, file_path],
-                capture_output=True,
-                encoding='utf-8'
-            )
-            if result.returncode == 0:
-                print(f"  {result.stdout.strip()}")
+            # ⚡ Bolt: Direct module import saves Python interpreter startup overhead.
+            import tools.validators.output_validator as val_module
+
+            validators = {
+                "dossier": val_module.validate_dossier,
+                "script": val_module.validate_script,
+                "voice": val_module.validate_voice_script,
+                "narration": val_module.validate_narration,
+                "master": val_module.validate_master_script,
+                "project": val_module.validate_project,
+                "manifest": val_module.validate_manifest,
+            }
+
+            validator_func = validators.get(val_type)
+            if not validator_func:
+                print(f"[FAIL] Unknown validation type: {val_type}")
+                return False
+
+            success, msg = validator_func(file_path)
+
+            if success:
+                print(f"  [OK] Validation PASSED: {msg}")
                 return True
             else:
-                print(f"[FAIL] Gate FAILED: {result.stdout.strip()}")
-                print(f"  Error Details: {result.stderr.strip()}")
+                print(f"[FAIL] Gate FAILED: [FAIL] Validation FAILED: {msg}")
                 return False
         except Exception as e:
             print(f"[FAIL] Error running validator gate: {str(e)}")
@@ -442,20 +462,19 @@ We are specifying the URLs and time ranges for the clips to be trimmed by the Ar
             
         print("[SCAN] Scanning for stale pipeline stages...")
         try:
-            result = subprocess.run(
-                [sys.executable, detector_script, self.project_path],
-                capture_output=True,
-                encoding='utf-8'
-            )
-            for line in result.stdout.splitlines():
-                if line.startswith("STALE_JSON:"):
-                    stale_data = json.loads(line.replace("STALE_JSON:", "").strip())
-                    for stage, is_stale in stale_data.items():
-                        if is_stale:
-                            key = f"{stage}_complete" if stage != "scavenging" else "scavenging_complete"
-                            if self.checkpoints.get(key, False):
-                                print(f"  - Resetting stale stage '{stage}' to incomplete.")
-                                self.checkpoints[key] = False
+            # ⚡ Bolt: Direct module import saves Python interpreter startup overhead.
+            import tools.validators.stale_detector as stale_module
+
+            stale_data = stale_module.detect_stale_stages(self.project_path)
+
+            for stage, is_stale in stale_data.items():
+                status = "⚠️  STALE (needs re-run)" if is_stale else "[OK] Up-to-date"
+                print(f"  - {stage}: {status}")
+                if is_stale:
+                    key = f"{stage}_complete" if stage != "scavenging" else "scavenging_complete"
+                    if self.checkpoints.get(key, False):
+                        print(f"  - Resetting stale stage '{stage}' to incomplete.")
+                        self.checkpoints[key] = False
             self.save_checkpoints()
         except Exception as e:
             print(f"⚠️  Failed to run stale detector: {str(e)}")
